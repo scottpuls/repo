@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-export PYBUILD_NAME=electrum-dash
+export PYBUILD_NAME=electrum-trc
 
 %:
 	dh $@ --with python3 --buildsystem=pybuild
@@ -10,19 +10,19 @@ override_dh_installchangelogs::
 
 override_dh_auto_install::
 	dh_auto_install
-	mkdir -p debian/electrum-dash/usr/bin \
-             debian/electrum-dash/usr/share
-	cp -r debian/python3-electrum-dash/usr/bin \
-       debian/electrum-dash/usr
-	cp -r debian/python3-electrum-dash/usr/share/applications \
-       debian/electrum-dash/usr/share
-	cp -r debian/python3-electrum-dash/usr/share/pixmaps \
-       debian/electrum-dash/usr/share
-	mkdir -p debian/dash-electrum/usr/bin \
-             debian/dash-electrum/usr/share
-	mv debian/python3-electrum-dash/usr/bin \
-       debian/dash-electrum/usr
-	mv debian/python3-electrum-dash/usr/share/applications \
-       debian/dash-electrum/usr/share
-	mv debian/python3-electrum-dash/usr/share/pixmaps \
-       debian/dash-electrum/usr/share
+	mkdir -p debian/electrum-trc/usr/bin \
+             debian/electrum-trc/usr/share
+	cp -r debian/python3-electrum-trc/usr/bin \
+       debian/electrum-trc/usr
+	cp -r debian/python3-electrum-trc/usr/share/applications \
+       debian/electrum-trc/usr/share
+	cp -r debian/python3-electrum-trc/usr/share/pixmaps \
+       debian/electrum-trc/usr/share
+	mkdir -p debian/trc-electrum/usr/bin \
+             debian/trc-electrum/usr/share
+	mv debian/python3-electrum-trc/usr/bin \
+       debian/trc-electrum/usr
+	mv debian/python3-electrum-trc/usr/share/applications \
+       debian/trc-electrum/usr/share
+	mv debian/python3-electrum-trc/usr/share/pixmaps \
+       debian/trc-electrum/usr/share

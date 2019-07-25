@@ -1,0 +1,14 @@
+{
+    "electrum.southofheaven.ca": {
+        "pruning": "-",
+        "s": "50002",
+        "t": "50001",
+        "version": "1.4"
+    },
+    "electrum.terracoin.io": {
+        "pruning": "-",
+        "s": "50002",
+	"t": "50001",
+        "version": "1.4"
+    }
+}

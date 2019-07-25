@@ -1,0 +1,22 @@
+# If you want Terracoin Electrum to appear in a Linux app launcher ("start menu"), install this by doing:
+# sudo desktop-file-install electrum-trc.desktop
+
+[Desktop Entry]
+Comment=Terracoin Electrum Wallet
+Exec=sh -c "PATH=\"\\$HOME/.local/bin:\\$PATH\"; electrum-trc %u"
+GenericName[en_US]=Terracoin Electrum
+GenericName=Terracoin Electrum
+Icon=electrum-trc
+Name[en_US]=Terracoin Electrum
+Name=Terracoin Electrum
+Categories=Network;
+StartupNotify=true
+StartupWMClass=trc-electrum
+Terminal=false
+Type=Application
+MimeType=x-scheme-handler/terracoin;
+Actions=Testnet;
+
+[Desktop Action Testnet]
+Exec=sh -c "PATH=\"\\$HOME/.local/bin:\\$PATH\"; electrum-trc --testnet %u"
+Name=Testnet mode
