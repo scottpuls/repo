@@ -1,12 +1,12 @@
 import unittest
 import base64
 
-from electrum_dash.masternode import MasternodeAnnounce, MasternodePing, NetworkAddress
-from electrum_dash.masternode_manager import parse_masternode_conf, MasternodeConfLine
-from electrum_dash import bitcoin
-from electrum_dash.crypto import sha256d
-from electrum_dash import ecc
-from electrum_dash.util import bfh, to_bytes
+from electrum_trc.masternode import MasternodeAnnounce, MasternodePing, NetworkAddress
+from electrum_trc.masternode_manager import parse_masternode_conf, MasternodeConfLine
+from electrum_trc import bitcoin
+from electrum_trc.crypto import sha256d
+from electrum_trc import ecc
+from electrum_trc.util import bfh, to_bytes
 
 
 raw_announce = '108d6bcba250fef7fc6dfaa5747092f6a1d00651fdb997233d94e0fd3cc4c7270000000000ffffffff00000000000000000000ffffc0a801654e1f2102d3879cdf9afcc59c42d8d858e44ba0e3d51df7792c6c0bbb6dd5e9de41f5580e4104431873cf0a6ae3f6903e72ed915f0e21029e59c1c279358f98e3d4136250c774a4b14bbd8a1ffb800c85310a8379869f05a24a6b99ce3d79f6194881ed7091d6411fabe342d726678ae2139c5e56870803111f9ce00c0df8b48d4d3aa7ef0c95f9567923bb53dce7b3a1ea694111abbf956f84ff1719922e08dbd0530fca23ce144400e70b5700000000d7110100108d6bcba250fef7fc6dfaa5747092f6a1d00651fdb997233d94e0fd3cc4c7270000000000ffffffff9fe612de60e895d900acee8387ede352f438b6a7318615c4a43ef4849700000000e70b5700000000411b5c4e56329362b83dfcbbaa70397c8c49cb7e69edf85b0e8232d2798b7196ec705036069ddc91126df98db4f6755b2ec01577ca417dfaa2e90a0382bd667e410d'
@@ -102,8 +102,8 @@ class TestMasternode(unittest.TestCase):
         announce = MasternodeAnnounce(vin=vin, addr=addr, collateral_key=collateral_pub, delegate_key=delegate_pub,
                 protocol_version=protocol_version, last_ping=last_ping)
 
-        collateral_wif = 'XJqCcyfnLYK4Y7ZDVjLrgPnsrq2cWMF6MX9cyhKgfMajwqrCwZaS'
-        delegate_wif = 'XCbhXBc2N9q8kxqBF41rSuLWVpVVbDm7P1oPv9GxcrS9QXYBWZkB'
+        collateral_wif = '5K4hm916sRw93k9eoSf4XfHvUmi4ZyEpfMMT7yprvWPhTCc7wcJ'
+        delegate_wif = '5HsgYSCySd34BySFqo1CDaYHJVdHy1yqBXk3dGy9ABB3B4Pos3T'
         announce.last_ping.sign(delegate_wif, bfh(delegate_pub), 1461858375)
         sig = announce.sign(collateral_wif, 1461858375)
 
@@ -201,8 +201,8 @@ class TestMasternode70210(unittest.TestCase):
                                       collateral_key=collateral_pub, delegate_key=delegate_pub,
                                       protocol_version=protocol_version, last_ping=last_ping)
 
-        collateral_wif = 'XJqCcyfnLYK4Y7ZDVjLrgPnsrq2cWMF6MX9cyhKgfMajwqrCwZaS'
-        delegate_wif = 'XCbhXBc2N9q8kxqBF41rSuLWVpVVbDm7P1oPv9GxcrS9QXYBWZkB'
+        collateral_wif = '5K4hm916sRw93k9eoSf4XfHvUmi4ZyEpfMMT7yprvWPhTCc7wcJ'
+        delegate_wif = '5HsgYSCySd34BySFqo1CDaYHJVdHy1yqBXk3dGy9ABB3B4Pos3T'
         announce.last_ping.sign(delegate_wif, bfh(delegate_pub), 1461858375)
         sig = announce.sign(collateral_wif, 1461858375)
 

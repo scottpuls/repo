@@ -2,10 +2,10 @@ import shutil
 import tempfile
 import os
 
-from electrum_dash import constants, blockchain
-from electrum_dash.simple_config import SimpleConfig
-from electrum_dash.blockchain import Blockchain, deserialize_header, hash_header
-from electrum_dash.util import bh2u, bfh, make_dir
+from electrum_trc import constants, blockchain
+from electrum_trc.simple_config import SimpleConfig
+from electrum_trc.blockchain import Blockchain, deserialize_header, hash_header
+from electrum_trc.util import bh2u, bfh, make_dir
 
 from . import SequentialTestCase
 
@@ -13,30 +13,30 @@ from . import SequentialTestCase
 class TestBlockchain(SequentialTestCase):
 
     HEADERS = {
-        'A': deserialize_header(bfh("010000000000000000000000000000000000000000000000000000000000000000000000c762a6567f3cc092f0684bb62b7e00a84890b990f07cc71a6bb58d64b98e02e0 b9968054 ffff7f20 ffba1000"), 0),
-        'B': deserialize_header(bfh("000000202e3df23eec5cd6a86edd509539028e2c3a3dc05315eb28f2baa43218ca080000186c8dfd970a4545f79916bc1d75c9d00432f57c89209bf3bb115b7612848f509c25f45bffff7f2000000000"), 1),
-        'C': deserialize_header(bfh("000000200a8be74779a59fec4f56abd6ce33bf2a8a1e896b0290a2aba90cf8fa6e6a88f7bf2cbf153013a1c54abaf70e95198fcef2f3059cc6b4d0f7e876808e7d24d11cc825f45bffff7f2000000000"), 2),
-        'D': deserialize_header(bfh("000000204a030521422dda1f980cfc2b38149edd3d8eab547e6efa3ab855048feb68dbdae71019d7feecd9b8596eca9a67032c5f4641b23b5d731dc393e37de7f9c2f299e725f45bffff7f2000000000"), 3),
-        'E': deserialize_header(bfh("00000020e39959c005b364248b24a17a72fcfe89d8478c71645b85edd444031ef5e5f896a3586da94c71753f27c075f57f44faf913c31177a0957bbda42e7699e3a2141aed25f45bffff7f2001000000"), 4),
-        'F': deserialize_header(bfh("00000020d02b1711b7bc72feb7b3e599e9f9bb67f163c95203a64f6dcd4f6176c15d31437aee1d692d1615c3bdf52c291032144ce9e3b258a473c17c745047f3431ff8e2ee25f45bffff7f2000000000"), 5),
-        'O': deserialize_header(bfh("00000020ed0bfee047765d7f4233106a13b4ff6d6c67f7ef9aec0e7466759f00ea74b2613a141ce635cbb1cd2b3a4fcdd0a3380517845ba41736c82a79cab535d31128066526f45bffff7f2001000000"), 6),
-        'P': deserialize_header(bfh("000000201f9b9f1e295fd4eda90b03b62a676f93642d28c258d8222a2e9d5f0c75cae0a99690c2fe7c1a4450c74dc908fe94dd96c3b0637d51475e9e06a78e944a0c7fe28126f45bffff7f2000000000"), 7),
-        'Q': deserialize_header(bfh("000000200076268f577977b9e7386f68a9c3c332aa613d27243abd8167a1bd891adf404f148be228a4c3f2061bafe7efdfc4a8d5a94759464b9b5c619994d45dfcaf49e1a126f45bffff7f2000000000"), 8),
-        'R': deserialize_header(bfh("000000208cfac7d4caa975c6b7fe770a8ea35a77a02f6e9b1900bae67a389619095c757515681cb2d00ff889193f6a68a93f5096aeb2d84ca0af6185a462555822552221a626f45bffff7f2000000000"), 9),
-        'S': deserialize_header(bfh("00000020936defed88e60da5cef2106338ef9ec221d65e9226f1fc29ec76e4b7c34a649c9dc087fc977b06c24a69c682d1afd1020e6dc1f087571ccec66310a786e1548fab26f45bffff7f2000000000"), 10),
-        'T': deserialize_header(bfh("00000020372528176ba7c014b6f388ba338c7a87a5c50bc4d8a1a1d5900cbf5725e6822903b243756c25053253aeda309604363460a3911015929e68705bd89dff6fe064b026f45bffff7f2002000000"), 11),
-        'U': deserialize_header(bfh("00000020c5a999182175cb571c7a15a08b8577e21b67c156a2c0ceebcce0d897e664fc3ad67cb902a7d807cee7676cb543feec3e053aa824d5dfb528d5b94f9760313d9db726f45bffff7f2001000000"), 12),
-        'G': deserialize_header(bfh("00000020ed0bfee047765d7f4233106a13b4ff6d6c67f7ef9aec0e7466759f00ea74b2613a141ce635cbb1cd2b3a4fcdd0a3380517845ba41736c82a79cab535d31128066928f45bffff7f2001000000"), 6),
-        'H': deserialize_header(bfh("00000020f8ca2216e002361e7cc1dd3e1197443e0b8068adaeec43d14be0e4f2159659e39690c2fe7c1a4450c74dc908fe94dd96c3b0637d51475e9e06a78e944a0c7fe26a28f45bffff7f2002000000"), 7),
-        'I': deserialize_header(bfh("00000020996b8b880bfe34b81dda59ae28ee28625a4dff565f671540a4703ebabd0ab991148be228a4c3f2061bafe7efdfc4a8d5a94759464b9b5c619994d45dfcaf49e16a28f45bffff7f2000000000"), 8),
-        'J': deserialize_header(bfh("000000201d5a4dfeeda94c6e4c3e40ce5c30df07e8103dba70cbce9d6b0890405c76b06715681cb2d00ff889193f6a68a93f5096aeb2d84ca0af6185a462555822552221c928f45bffff7f2000000000"), 9),
-        'K': deserialize_header(bfh("00000020f93c46944a529187faae721951e66e187a0e910104e91ec8d1d4a914cadd79a89dc087fc977b06c24a69c682d1afd1020e6dc1f087571ccec66310a786e1548fca28f45bffff7f2000000000"), 10),
-        'L': deserialize_header(bfh("00000020d76bdf59ed1ce4a4a31aa7649f8a39da2b956515f3bdb78b2bcdaaed60444bad03b243756c25053253aeda309604363460a3911015929e68705bd89dff6fe064ca28f45bffff7f2000000000"), 11),
-        'M': deserialize_header(bfh("000000201d5a4dfeeda94c6e4c3e40ce5c30df07e8103dba70cbce9d6b0890405c76b06715681cb2d00ff889193f6a68a93f5096aeb2d84ca0af6185a4625558225522214229f45bffff7f2000000000"), 9),
-        'N': deserialize_header(bfh("00000020ff8ef64ad77c7c02103127be41dc39dda5f4dd17cbbaa7475fa8b7a3dd110ee19dc087fc977b06c24a69c682d1afd1020e6dc1f087571ccec66310a786e1548f4329f45bffff7f2003000000"), 10),
-        'X': deserialize_header(bfh("000000202857b96792f630a80f7c834afd5985b833794037930c1fe655c23b6eb769c85203b243756c25053253aeda309604363460a3911015929e68705bd89dff6fe0649b29f45bffff7f2002000000"), 11),
-        'Y': deserialize_header(bfh("000000206cc9a0dec93cffaab358ef9bd06fa0137d53e37a4b251f57da831ef31fccf9f2d67cb902a7d807cee7676cb543feec3e053aa824d5dfb528d5b94f9760313d9d9b29f45bffff7f2000000000"), 12),
-        'Z': deserialize_header(bfh("00000020756a6bfe58694141de4abf3317bccfa105b5ec30b997dda15a9ab02a9d86eba00f2596c29203f8a0f71ae94193092dc8f113be3dbee4579f1e649fa3d6dcc38c622ef45bffff7f2003000000"), 13),
+        'A': deserialize_header(bfh("01000000000000000000000000000000000000000000000000000000000000000000000096f12836f9a4d8029fea2c89ad06be01a9aaa6f3c3160c5867b00338f9098b0fdae5494dffff7f2002000000"), 0),
+        'B': deserialize_header(bfh("04010100d2a8d4eaa8ba68d79f1b92313b1f11ba539c3a540b1d84b9e669e1fce7a22454c5b3adce07063ce7a0c10586aaef7e57d9f1fcdbbd323b333beedfe5b1c3c7cd92153a5dffff7f2000000000"), 1),
+        'C': deserialize_header(bfh("04010100aeb03bd6576cce945215f99080a311c26c93165d830de2a54fa58a18de533519c8160f84c8da831592362da0bfcb89d6da871b32fcd906e8198267ea9d5b526593153a5dffff7f2000000000"), 2),
+        'D': deserialize_header(bfh("0401010084aa29cf0745a3c22c2f337934ea353dacbe9c703fd09a292fb326cf9f6312558a6c5acd18c144171edd3b3a9d2e7464a8922cb15647e70715220db6b8f0603293153a5dffff7f2000000000"), 3),
+        'E': deserialize_header(bfh("040101005434ea5acbd422bdee0bc85f539c69e500754007238b43d16362fedfec4ce7ce3f83f1588acc9b419a4f5b3ea8f12500d30280cad34acad00cc0a7be030704fb94153a5dffff7f2000000000"), 4),
+        'F': deserialize_header(bfh("04010100fea84de1e70b66f600cfc6662220fc1b619a77f89203c2c07f2ef33dc94ba1956ae4074f4c02a0aae2f758e2842938feb4898f9854867aacd451031bf374ec2594153a5dffff7f2000000000"), 5),
+        'O': deserialize_header(bfh("04010100ff601cc5e3df8f0590a9be43e9e762a0416253bc665bb7867a18ecb890f94c79c4dc044802c1146f2960366c8d6de8455d7523cec2ac3d39e212f1565a8f8f1794153a5dffff7f2000000000"), 6),
+        'P': deserialize_header(bfh("0401010046f5eee8a16352acfe929d27af9494f5738b408a4223016fb41d81a35d2cd3c75d0c56d1272b3efee929b2e4d764f37d9a12f4be9784017442e2fd13822e6534061b3a5dffff7f2000000000"), 7),
+        'Q': deserialize_header(bfh("04010100f782fb7ef21769f2fa7e304ba9cf2d7b17537e6dee773fa48c895bf47efebbea58fc9903c96106191f932fa92b4a5a304c88f77783717f2650b5e867fd03f1b5061b3a5dffff7f2000000000"), 8),
+        'R': deserialize_header(bfh("040101004c5d47a675e2a8af6261313494e83b7c7411222d72aa32ccbebc43ec5c74bde50445594bfe82354d4901f870dbf42ccdaf7438dcf5b88aab0bd8d814a515aaa9061b3a5dffff7f2000000000"), 9),
+        'S': deserialize_header(bfh("040101005e0559e20e90ccd9def4fbfa36aa6762fdd43e05939cef17849a224a991e3f190b21359445699cf68d8269017e8fb577deca79ae774c6c481e33874b21d7f814061b3a5dffff7f2000000000"), 10),
+        'T': deserialize_header(bfh("040101004b65a96d5833467f7b770c02bfbc592bc439471a9101e9fcb348e26fd10b65d4d80a86bdf598a2ecbbec1e9ba16f66fab619b2604e94e63c4489359d8b1a0c72061b3a5dffff7f2000000000"), 11),
+        'U': deserialize_header(bfh("040101009d2857ea52e62b41159f183c3961f54b751c0e7b124e9c0abec315416cea91d27e63ce93d701645c2f79cd90b3fcee717276c6af40f0ec5d7ef1e589ba3eb4bb061b3a5dffff7f2000000000"), 12),
+        'G': deserialize_header(bfh("04010100ff601cc5e3df8f0590a9be43e9e762a0416253bc665bb7867a18ecb890f94c79c4dc044802c1146f2960366c8d6de8455d7523cec2ac3d39e212f1565a8f8f1794153a5dffff7f2000000000"), 6),
+        'H': deserialize_header(bfh("0401010046f5eee8a16352acfe929d27af9494f5738b408a4223016fb41d81a35d2cd3c73a82a080149e5f04dee31e89d491cdb732ca643dfb1dce355bdf628dc21e8c6494153a5dffff7f2000000000"), 7),
+        'I': deserialize_header(bfh("04010100056e368100b10d9a715c7bdce7e31d1f8518d19b07a8aa6e6909569c5a80fec1842026f9d0a97e1d2d98da06b7f82c16cbbdf130d955bb807178986409caf3e095153a5dffff7f2000000000"), 8),
+        'J': deserialize_header(bfh("040101002a8a5bb4242a400052282bc9bc961d353b14dc59ea56349019891784e5224f95fe81e90dc6964e6e8926ae398636793ee28d3e3245532bdf6127fcbd146c932795153a5dffff7f2000000000"), 9),
+        'K': deserialize_header(bfh("0401010059c0544847fb33f0238b7a5eceed2ba19293c4b5c94276a273865e419c0fdcfb5679e53c102027584ed102ef69036e2862932a2fe2ccd6b79757666cb9d4e9c995153a5dffff7f2000000000"), 10),
+        'L': deserialize_header(bfh("0401010016c08d913ef7054acef3a5cd346c848243234645df69efc7bfb90553e453c4ccc1e463e6c8c1afa8d270b45be45d1abeaac0d09ed21f0a95db606dc8a9856ba595153a5dffff7f2000000000"), 11),
+        'M': deserialize_header(bfh("040101002a8a5bb4242a400052282bc9bc961d353b14dc59ea56349019891784e5224f95fe81e90dc6964e6e8926ae398636793ee28d3e3245532bdf6127fcbd146c932795153a5dffff7f2000000000"), 9),
+        'N': deserialize_header(bfh("0401010059c0544847fb33f0238b7a5eceed2ba19293c4b5c94276a273865e419c0fdcfbe39f9848d61df25b2b277089ccf9eef837b8381cc5ed6749e18598da87e490d678183a5dffff7f2000000000"), 10),
+        'X': deserialize_header(bfh("04010100f4444a20ddfab37b22dd0cb838128e437679606d20722d7c1e69bc9504445d558e891bfd831e2440ac56ce6c24b4ae1f333b46727bf513ebe125c5fa941a441d78183a5dffff7f2000000000"), 11),
+        'Y': deserialize_header(bfh("040101008618f830e30249a314cc453d15a3a518592efc984389164af3ee504ca6de9c12bfd55d093954d7a8e56dd5b1aa60c5b53e4d4005bb7548bb5e98837d7850feac78183a5dffff7f2000000000"), 12),
+        'Z': deserialize_header(bfh("04010100f2180d103da82c4c377b7ff2d90353f30bb14acf94de3fad271dcf5903d8ee6b066e7374b211cbe95f4f537e1e4816f55d15a410318ca8bd8542dbe540c73dd378183a5dffff7f2000000000"), 13),
     }
     # tree of headers:
     #                                            - M <- N <- X <- Y <- Z
@@ -207,7 +207,7 @@ class TestBlockchain(SequentialTestCase):
         self.assertEqual(chain_u, chain_l.parent)
         self.assertEqual(hash_header(self.HEADERS['G']), chain_l._forkpoint_hash)
         self.assertEqual(hash_header(self.HEADERS['F']), chain_l._prev_hash)
-        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_6_61b274ea009f7566740eec9aeff7676c6dffb4136a1033427f5d7647e0fe0bed_e3599615f2e4e04bd143ecaead68800b3e4497113eddc17c1e3602e01622caf8"), chain_l.path())
+        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_6_794cf990b8ec187a86b75b66bc536241a062e7e943bea990058fdfe3c51c60ff_c7d32c5da3811db46f0123428a408b73f59494af279d92feac5263a1e8eef546"), chain_l.path())
         self.assertEqual(4 * 80, os.stat(chain_l.path()).st_size)
 
         self._append_header(chain_l, self.HEADERS['K'])
@@ -219,7 +219,7 @@ class TestBlockchain(SequentialTestCase):
         self.assertEqual(chain_l, chain_u.parent)
         self.assertEqual(hash_header(self.HEADERS['O']), chain_u._forkpoint_hash)
         self.assertEqual(hash_header(self.HEADERS['F']), chain_u._prev_hash)
-        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_6_61b274ea009f7566740eec9aeff7676c6dffb4136a1033427f5d7647e0fe0bed_a9e0ca750c5f9d2e2a22d858c2282d64936f672ab6030ba9edd45f291e9f9b1f"), chain_u.path())
+        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_6_794cf990b8ec187a86b75b66bc536241a062e7e943bea990058fdfe3c51c60ff_c7d32c5da3811db46f0123428a408b73f59494af279d92feac5263a1e8eef546"), chain_u.path())
         self.assertEqual(4 * 80, os.stat(chain_u.path()).st_size)
         self.assertEqual(0, chain_l.forkpoint)
         self.assertEqual(None, chain_l.parent)
@@ -254,13 +254,13 @@ class TestBlockchain(SequentialTestCase):
         self.assertEqual(chain_z, chain_l.parent)
         self.assertEqual(hash_header(self.HEADERS['J']), chain_l._forkpoint_hash)
         self.assertEqual(hash_header(self.HEADERS['I']), chain_l._prev_hash)
-        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_9_67b0765c4090086b9dcecb70ba3d10e807df305cce403e4c6e4ca9edfe4d5a1d_a879ddca14a9d4d1c81ee90401910e7a186ee6511972aefa8791524a94463cf9"), chain_l.path())
+        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_9_954f22e584178919903456ea59dc143b351d96bcc92b285200402a24b45b8a2a_fbdc0f9c415e8673a27642c9b5c49392a12bedce5e7a8b23f033fb474854c059"), chain_l.path())
         self.assertEqual(3 * 80, os.stat(chain_l.path()).st_size)
         self.assertEqual(6, chain_u.forkpoint)
         self.assertEqual(chain_z, chain_u.parent)
         self.assertEqual(hash_header(self.HEADERS['O']), chain_u._forkpoint_hash)
         self.assertEqual(hash_header(self.HEADERS['F']), chain_u._prev_hash)
-        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_6_61b274ea009f7566740eec9aeff7676c6dffb4136a1033427f5d7647e0fe0bed_a9e0ca750c5f9d2e2a22d858c2282d64936f672ab6030ba9edd45f291e9f9b1f"), chain_u.path())
+        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_6_794cf990b8ec187a86b75b66bc536241a062e7e943bea990058fdfe3c51c60ff_c7d32c5da3811db46f0123428a408b73f59494af279d92feac5263a1e8eef546"), chain_u.path())
         self.assertEqual(7 * 80, os.stat(chain_u.path()).st_size)
         for b in (chain_u, chain_l, chain_z):
             self.assertTrue(all([b.can_connect(b.read_header(i), False) for i in range(b.height())]))
@@ -321,13 +321,13 @@ class TestBlockchain(SequentialTestCase):
         self.assertEqual(chain_z, chain_l.parent)
         self.assertEqual(hash_header(self.HEADERS['J']), chain_l._forkpoint_hash)
         self.assertEqual(hash_header(self.HEADERS['I']), chain_l._prev_hash)
-        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_9_67b0765c4090086b9dcecb70ba3d10e807df305cce403e4c6e4ca9edfe4d5a1d_a879ddca14a9d4d1c81ee90401910e7a186ee6511972aefa8791524a94463cf9"), chain_l.path())
+        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_9_954f22e584178919903456ea59dc143b351d96bcc92b285200402a24b45b8a2a_fbdc0f9c415e8673a27642c9b5c49392a12bedce5e7a8b23f033fb474854c059"), chain_l.path())
         self.assertEqual(2 * 80, os.stat(chain_l.path()).st_size)
         self.assertEqual(6, chain_u.forkpoint)
         self.assertEqual(chain_z, chain_u.parent)
         self.assertEqual(hash_header(self.HEADERS['O']), chain_u._forkpoint_hash)
         self.assertEqual(hash_header(self.HEADERS['F']), chain_u._prev_hash)
-        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_6_61b274ea009f7566740eec9aeff7676c6dffb4136a1033427f5d7647e0fe0bed_a9e0ca750c5f9d2e2a22d858c2282d64936f672ab6030ba9edd45f291e9f9b1f"), chain_u.path())
+        self.assertEqual(os.path.join(self.data_dir, "forks", "fork2_6_794cf990b8ec187a86b75b66bc536241a062e7e943bea990058fdfe3c51c60ff_c7d32c5da3811db46f0123428a408b73f59494af279d92feac5263a1e8eef546"), chain_u.path())
         self.assertEqual(5 * 80, os.stat(chain_u.path()).st_size)
 
         self.assertEqual(constants.net.GENESIS, chain_z.get_hash(0))

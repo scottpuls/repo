@@ -1,7 +1,7 @@
 import base64
 import sys
 
-from electrum_dash.bitcoin import (public_key_to_p2pkh, address_from_private_key,
+from electrum_trc.bitcoin import (public_key_to_p2pkh, address_from_private_key,
                                    is_address, is_private_key,
                                    var_int, _op_push, address_to_script,
                                    deserialize_privkey, serialize_privkey,
@@ -9,18 +9,18 @@ from electrum_dash.bitcoin import (public_key_to_p2pkh, address_from_private_key
                                    is_compressed_privkey, EncodeBase58Check, DecodeBase58Check,
                                    script_num_to_hex, push_script, add_number_to_script, int_to_hex,
                                    opcodes, base_encode, base_decode, BitcoinException)
-from electrum_dash.bip32 import (BIP32Node, convert_bip32_intpath_to_strpath,
+from electrum_trc.bip32 import (BIP32Node, convert_bip32_intpath_to_strpath,
                                  xpub_from_xprv, xpub_type, is_xprv, is_bip32_derivation,
                                  is_xpub, convert_bip32_path_to_list_of_uint32,
                                  normalize_bip32_derivation)
-from electrum_dash.crypto import sha256d, SUPPORTED_PW_HASH_VERSIONS
-from electrum_dash import ecc, crypto, constants
-from electrum_dash.ecc import number_to_string, string_to_number
-from electrum_dash.util import bfh, bh2u, InvalidPassword
-from electrum_dash.storage import WalletStorage
-from electrum_dash.keystore import xtype_from_derivation, from_master_key
+from electrum_trc.crypto import sha256d, SUPPORTED_PW_HASH_VERSIONS
+from electrum_trc import ecc, crypto, constants
+from electrum_trc.ecc import number_to_string, string_to_number
+from electrum_trc.util import bfh, bh2u, InvalidPassword
+from electrum_trc.storage import WalletStorage
+from electrum_trc.keystore import xtype_from_derivation, from_master_key
 
-from electrum_dash import ecc_fast
+from electrum_trc import ecc_fast
 
 from . import SequentialTestCase
 from . import TestCaseForTestnet
@@ -164,11 +164,11 @@ class Test_bitcoin(SequentialTestCase):
             return key.sign_message(msg, compressed)
 
         sig1 = sign_message_with_wif_privkey(
-            'XFXhvJNxgFoHR8W57qCrRzokud8JVot7XHoF92w1cZe5Bh55unMK', msg1)
-        addr1 = 'XfP5HuY7jKkMAhwej7yLKZ1K2VGuPwGCye'
+            'L1TnU2zbNaAqMoVh65Cyvmcjzbrj41Gs9iTLcWbpJCMynXuap6UN', msg1)
+        addr1 = '15hETetDmcXm1mM4sEf7U2KXC9hDHFMSzz'
         sig2 = sign_message_with_wif_privkey(
-            '7qhMUpAsBF7hLzFd44Xq49AJF5nRjmkStUvwQUJx1szezCkAb7s', msg2)
-        addr2 = 'Xr58KiC2RvNN83LZExCoszE6mpAudBqQwK'
+            '5Hxn5C4SQuiV6e62A1MtZmbSeQyrLFhu5uYks62pU5VBUygK2KD', msg2)
+        addr2 = '1GPHVTY8UD9my6jyP4tb2TYJwUbDetyNC6'
 
         sig1_b64 = base64.b64encode(sig1)
         sig2_b64 = base64.b64encode(sig2)
@@ -359,24 +359,24 @@ class Test_bitcoin(SequentialTestCase):
 
     def test_address_to_script(self):
         # base58 P2PKH
-        self.assertEqual(address_to_script('XeNTG4aihv1ru8xmaoiQnToSi8hLiTTNbh'), '76a91428662c67561b95c79d2257d2a93d9d151c977e9188ac')
-        self.assertEqual(address_to_script('XkvgWFLxVmDaVkUF8bFE2QXP4f5C2KKWEg'), '76a914704f4b81cadb7bf7e68c08cd3657220f680f863c88ac')
+        self.assertEqual(address_to_script('14gcRovpkCoGkCNBivQBvw7eso7eiNAbxG'), '76a91428662c67561b95c79d2257d2a93d9d151c977e9188ac')
+        self.assertEqual(address_to_script('1BEqfzh4Y3zzLosfGhw1AsqbEKVW6e1qHv'), '76a914704f4b81cadb7bf7e68c08cd3657220f680f863c88ac')
 
         # base58 P2SH
-        self.assertEqual(address_to_script('7WHUEVtMDLeereT5r4ZoNKjr3MXr4gqfon'), 'a9142a84cf00d47f699ee7bbc1dea5ec1bdecb4ac15487')
-        self.assertEqual(address_to_script('7phNpVKta6kkbP24HfvvQVeHEmgBQYiJCB'), 'a914f47c8954e421031ad04ecd8e7752c9479206b9d387')
+        self.assertEqual(address_to_script('35ZqQJcBQMZ1rsv8aSuJ2wkC7ohUCQMJbT'), 'a9142a84cf00d47f699ee7bbc1dea5ec1bdecb4ac15487')
+        self.assertEqual(address_to_script('3PyjzJ3im7f7bcV724GR57edKDqoZvH7Ji'), 'a914f47c8954e421031ad04ecd8e7752c9479206b9d387')
 
 
 class Test_bitcoin_testnet(TestCaseForTestnet):
 
     def test_address_to_script(self):
         # base58 P2PKH
-        self.assertEqual(address_to_script('yah2ARXMnY5A9VaR5Cd43fjiQnsu2vZ5a8'), '76a9149da64e300c5e4eb4aaffc9c2fd465348d5618ad488ac')
-        self.assertEqual(address_to_script('yPeP8a774GuYaZyqJPxC7K24hcbcsqz1Au'), '76a914247d2d5b6334bdfa2038e85b20fc15264f8e5d2788ac')
+        self.assertEqual(address_to_script('mutXcGt1CJdkRvXuN2xoz2quAAQYQ59bRX'), '76a9149da64e300c5e4eb4aaffc9c2fd465348d5618ad488ac')
+        self.assertEqual(address_to_script('miqtaRTkU3U8rzwKbEHx3g8FSz8GJtPS3K'), '76a914247d2d5b6334bdfa2038e85b20fc15264f8e5d2788ac')
 
         # base58 P2SH
-        self.assertEqual(address_to_script('8pWgedHiF9DQswwXdR59ATSQe9pxyBZqbv'), 'a9146eae23d8c4a941316017946fc761a7a6c85561fb87')
-        self.assertEqual(address_to_script('91EoMZCG6Yfs9NGZLYQcrJcUa55TLnvVxz'), 'a914e4567743d378957cd2ee7072da74b1203c1a7a0b87')
+        self.assertEqual(address_to_script('2N3LSvr3hv5EVdfcrxg2Yzecf3SRvqyBE4p'), 'a9146eae23d8c4a941316017946fc761a7a6c85561fb87')
+        self.assertEqual(address_to_script('2NE4ZdmxFmUgwu5wtfoN2gVniyMgRDYq1kk'), 'a914e4567743d378957cd2ee7072da74b1203c1a7a0b87')
 
 
 class Test_xprv_xpub(SequentialTestCase):
@@ -539,110 +539,110 @@ class Test_xprv_xpub_testnet(TestCaseForTestnet):
             xkey_b58 = EncodeBase58Check(xkey_bytes)
             self.assertTrue(xkey_b58.startswith(xpub_headers_b58[xtype]))
 
-
-class Test_drk_import(SequentialTestCase):
-    """ The keys used in this class are TEST keys from
-        https://en.bitcoin.it/wiki/BIP_0032_TestVectors"""
-
-    xpub = 'xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw'
-    xprv = 'xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7'
-    drkp = 'drkpRv3MKBiuEwFtNSzj62Kwpj7Cd77NVUYAPoxBN8EL5rSn6EMWr3bD4RnwwbGrnQZStpYJ1iGZCiGKt9mR7aYNtaurGyTCQZuwVzqzAbX9znj'
-    drkv = 'drkvjLuVs1zJu2rKwexyhS5mYeVuNs2umm4bZMg8hv4Zy28xLX2tXbr6tzytFNsAsqjveLoFqSgcNhF4YoonH1y35REUMeSFJZ8ALdoFutwvbtw'
-    master_fpr = '3442193e'
-    sec_key = 'edb2e14f9ee77d26dd93b4ecede8d16ed408ce149b6cd80b0715a2d911a0afea'
-    pub_key = '035a784662a4a20a65bf6aab9ae98a6c068a81c52e4b032c0fb5400c706cfccc56'
-    child_num = '80000000'
-    chain_code = '47fdacbd0f1097043b78c63c20c34ef4ed9a111d980047ad16282c7ae6236141'
-    xtype = 'standard'
-
-    @needs_test_with_all_ecc_implementations
-    def check_from_x(self, x, prv):
-        node = BIP32Node.from_xkey(x)
-
-        self.assertEqual(self.xtype, node.xtype)
-        self.assertEqual(1, node.depth)
-        self.assertEqual(self.master_fpr, bh2u(node.fingerprint))
-        self.assertEqual(self.child_num, bh2u(node.child_number))
-        self.assertEqual(self.chain_code, bh2u(node.chaincode))
-        self.assertEqual(self.pub_key, node.eckey.get_public_key_hex())
-        if prv:
-            self.assertEqual(self.sec_key, bh2u(node.eckey.get_secret_bytes()))
-
-    @needs_test_with_all_ecc_implementations
-    def test_from_xpub(self):
-        self.check_from_x(self.xpub, False)
-
-    @needs_test_with_all_ecc_implementations
-    def test_from_xprv(self):
-        self.check_from_x(self.xprv, True)
-
-    @needs_test_with_all_ecc_implementations
-    def test_from_drkp(self):
-        self.check_from_x(self.drkp, False)
-
-    @needs_test_with_all_ecc_implementations
-    def test_from_drkv(self):
-        self.check_from_x(self.drkv, True)
-
-    @needs_test_with_all_ecc_implementations
-    def test_keystore_from_xpub(self):
-        keystore = from_master_key(self.xpub)
-        self.assertEqual(keystore.xpub, self.xpub)
-        self.assertEqual(keystore.xprv, None)
-
-    @needs_test_with_all_ecc_implementations
-    def test_keystore_from_xprv(self):
-        keystore = from_master_key(self.xprv)
-        self.assertEqual(keystore.xpub, self.xpub)
-        self.assertEqual(keystore.xprv, self.xprv)
-
-    @needs_test_with_all_ecc_implementations
-    def test_keystore_from_drkp(self):
-        keystore = from_master_key(self.drkp)
-        self.assertEqual(keystore.xpub, self.xpub)
-        self.assertEqual(keystore.xprv, None)
-
-    @needs_test_with_all_ecc_implementations
-    def test_keystore_from_drkv(self):
-        keystore = from_master_key(self.drkv)
-        self.assertEqual(keystore.xpub, self.xpub)
-        self.assertEqual(keystore.xprv, self.xprv)
+# Terracoin doesn't have this yet
+#class Test_drk_import(SequentialTestCase):
+#    """ The keys used in this class are TEST keys from
+#        https://en.bitcoin.it/wiki/BIP_0032_TestVectors"""
+#
+#    xpub = 'xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw'
+#    xprv = 'xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7'
+#    drkp = 'drkpRv3MKBiuEwFtNSzj62Kwpj7Cd77NVUYAPoxBN8EL5rSn6EMWr3bD4RnwwbGrnQZStpYJ1iGZCiGKt9mR7aYNtaurGyTCQZuwVzqzAbX9znj'
+#    drkv = 'drkvjLuVs1zJu2rKwexyhS5mYeVuNs2umm4bZMg8hv4Zy28xLX2tXbr6tzytFNsAsqjveLoFqSgcNhF4YoonH1y35REUMeSFJZ8ALdoFutwvbtw'
+#    master_fpr = '3442193e'
+#    sec_key = 'edb2e14f9ee77d26dd93b4ecede8d16ed408ce149b6cd80b0715a2d911a0afea'
+#    pub_key = '035a784662a4a20a65bf6aab9ae98a6c068a81c52e4b032c0fb5400c706cfccc56'
+#    child_num = '80000000'
+#    chain_code = '47fdacbd0f1097043b78c63c20c34ef4ed9a111d980047ad16282c7ae6236141'
+#    xtype = 'standard'
+#
+#    @needs_test_with_all_ecc_implementations
+#    def check_from_x(self, x, prv):
+#        node = BIP32Node.from_xkey(x)
+#
+#        self.assertEqual(self.xtype, node.xtype)
+#        self.assertEqual(1, node.depth)
+#        self.assertEqual(self.master_fpr, bh2u(node.fingerprint))
+#        self.assertEqual(self.child_num, bh2u(node.child_number))
+#        self.assertEqual(self.chain_code, bh2u(node.chaincode))
+#        self.assertEqual(self.pub_key, node.eckey.get_public_key_hex())
+#        if prv:
+#            self.assertEqual(self.sec_key, bh2u(node.eckey.get_secret_bytes()))
+#
+#    @needs_test_with_all_ecc_implementations
+#    def test_from_xpub(self):
+#        self.check_from_x(self.xpub, False)
+#
+#    @needs_test_with_all_ecc_implementations
+#    def test_from_xprv(self):
+#        self.check_from_x(self.xprv, True)
+#
+#    @needs_test_with_all_ecc_implementations
+#    def test_from_drkp(self):
+#        self.check_from_x(self.drkp, False)
+#
+#    @needs_test_with_all_ecc_implementations
+#    def test_from_drkv(self):
+#        self.check_from_x(self.drkv, True)
+#
+#    @needs_test_with_all_ecc_implementations
+#    def test_keystore_from_xpub(self):
+#        keystore = from_master_key(self.xpub)
+#        self.assertEqual(keystore.xpub, self.xpub)
+#        self.assertEqual(keystore.xprv, None)
+#
+#    @needs_test_with_all_ecc_implementations
+#    def test_keystore_from_xprv(self):
+#        keystore = from_master_key(self.xprv)
+#        self.assertEqual(keystore.xpub, self.xpub)
+#        self.assertEqual(keystore.xprv, self.xprv)
+#
+#    @needs_test_with_all_ecc_implementations
+#    def test_keystore_from_drkp(self):
+#        keystore = from_master_key(self.drkp)
+#        self.assertEqual(keystore.xpub, self.xpub)
+#        self.assertEqual(keystore.xprv, None)
+#
+#    @needs_test_with_all_ecc_implementations
+#    def test_keystore_from_drkv(self):
+#        keystore = from_master_key(self.drkv)
+#        self.assertEqual(keystore.xpub, self.xpub)
+#        self.assertEqual(keystore.xprv, self.xprv)
 
 
 class Test_keyImport(SequentialTestCase):
 
     priv_pub_addr = (
-           {'priv': 'XERBBcaPf5D5oFXTEP7TdPWLem5ktc2Zr3AhhQhHVQaF49fDP6tN',
-            'exported_privkey': 'p2pkh:XERBBcaPf5D5oFXTEP7TdPWLem5ktc2Zr3AhhQhHVQaF49fDP6tN',
+           {'priv': 'KzMFjMC2MPadjvX5Cd7b8AKKjjpBSoRKUTpoAtN6B3J9ezWYyXS6',
+            'exported_privkey': 'p2pkh:KzMFjMC2MPadjvX5Cd7b8AKKjjpBSoRKUTpoAtN6B3J9ezWYyXS6',
             'pub': '02c6467b7e621144105ed3e4835b0b4ab7e35266a2ae1c4f8baa19e9ca93452997',
-            'address': 'XhGqfhnLxoqPai6uQ93GLGg6kJJErGb7b1',
+            'address': '17azqT8T16coRmWKYFj3UjzJuxiYrYFRBR',
             'minikey' : False,
             'txin_type': 'p2pkh',
             'compressed': True,
             'addr_encoding': 'base58',
             'scripthash': 'c9aecd1fef8d661a42c560bf75c8163e337099800b8face5ca3d1393a30508a7'},
-           {'priv': 'p2pkh:XEo3x1LBrpn3UAW2WURQMZ6Y4ncRTbi7tXbFihdyLH3HSHFVub9W',
-            'exported_privkey': 'p2pkh:XEo3x1LBrpn3UAW2WURQMZ6Y4ncRTbi7tXbFihdyLH3HSHFVub9W',
+           {'priv': 'p2pkh:Kzj8VjwpZ99bQqVeUiRXrKuX9mLr1o6sWxFMCBJn1umC38BMiQTD',
+            'exported_privkey': 'p2pkh:Kzj8VjwpZ99bQqVeUiRXrKuX9mLr1o6sWxFMCBJn1umC38BMiQTD',
             'pub': '0352d78b4b37e0f6d4e164423436f2925fa57817467178eca550a88f2821973c41',
-            'address': 'XrDXPL4c4Pz7cE62gMhnCVjzYNNHfWGJwC',
+            'address': '1GXgZ5Qi6gmXTHVSpUPZLy4Ci2nbfb3ZNb',
             'minikey': False,
             'txin_type': 'p2pkh',
             'compressed': True,
             'addr_encoding': 'base58',
             'scripthash': 'a9b2a76fc196c553b352186dfcca81fcf323a721cd8431328f8e9d54216818c1'},
-           {'priv': '7qhMUpAsBF7hLzFd44Xq49AJF5nRjmkStUvwQUJx1szezCkAb7s',
-            'exported_privkey': 'p2pkh:7qhMUpAsBF7hLzFd44Xq49AJF5nRjmkStUvwQUJx1szezCkAb7s',
+           {'priv': '5Hxn5C4SQuiV6e62A1MtZmbSeQyrLFhu5uYks62pU5VBUygK2KD',
+            'exported_privkey': 'p2pkh:5Hxn5C4SQuiV6e62A1MtZmbSeQyrLFhu5uYks62pU5VBUygK2KD',
             'pub': '04e5fe91a20fac945845a5518450d23405ff3e3e1ce39827b47ee6d5db020a9075422d56a59195ada0035e4a52a238849f68e7a325ba5b2247013e0481c5c7cb3f',
-            'address': 'Xr58KiC2RvNN83LZExCoszE6mpAudBqQwK',
+            'address': '1GPHVTY8UD9my6jyP4tb2TYJwUbDetyNC6',
             'minikey': False,
             'txin_type': 'p2pkh',
             'compressed': False,
             'addr_encoding': 'base58',
             'scripthash': 'f5914651408417e1166f725a5829ff9576d0dbf05237055bf13abd2af7f79473'},
-           {'priv': 'p2pkh:7sS7opkSixUtHF1RfpSkxsnfpaGAZeyLdB6NucDUvyTVesfwXv9',
-            'exported_privkey': 'p2pkh:7sS7opkSixUtHF1RfpSkxsnfpaGAZeyLdB6NucDUvyTVesfwXv9',
+           {'priv': 'p2pkh:5KhYQCe1xd5g2tqpmmGpUWDpDuTbA8vnpbiCNDwMPAx29WNQYfN',
+            'exported_privkey': 'p2pkh:5KhYQCe1xd5g2tqpmmGpUWDpDuTbA8vnpbiCNDwMPAx29WNQYfN',
             'pub': '048f0431b0776e8210376c81280011c2b68be43194cb00bd47b7e9aa66284b713ce09556cde3fee606051a07613f3c159ef3953b8927c96ae3dae94a6ba4182e0e',
-            'address': 'XdobYfwBirtRoJ12YiyHbZmKqF62RC4DM6',
+            'address': '147kiRHHm9fqeMQSgqf4k35XzuWLP9fmmS',
             'minikey': False,
             'txin_type': 'p2pkh',
             'compressed': False,
@@ -650,9 +650,9 @@ class Test_keyImport(SequentialTestCase):
             'scripthash': '6dd2e07ad2de9ba8eec4bbe8467eb53f8845acff0d9e6f5627391acc22ff62df'},
            # from http://bitscan.com/articles/security/spotlight-on-mini-private-keys
            {'priv': 'SzavMBLoXU6kDrqtUVmffv',
-            'exported_privkey': 'p2pkh:7sKi9xmam1ud39rKXGL3ajZEvmGSy5aauGthuG9aYBV73kq1i2J',
+            'exported_privkey': 'p2pkh:5Kb8kLf9zgWQnogidDA76MzPL6TsZZY36hWXMssSzNydYXYB9KF',
             'pub': '04588d202afcc1ee4ab5254c7847ec25b9a135bbda0f2bc69ee1a714749fd77dc9f88ff2a00d7e752d44cbe16e1ebcf0890b76ec7c78886109dee76ccfc8445424',
-            'address': 'XmstMHLo2qqh6U56DYz3mX3w8WF9RumTWJ',
+            'address': '1CC3X2gu58d6wXUWMffpuzN9JAfTUWu4Kj',
             'minikey': True,
             'txin_type': 'p2pkh',
             'compressed': False,  # this is actually ambiguous... issue #2748

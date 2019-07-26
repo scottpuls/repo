@@ -1,7 +1,7 @@
 import unittest
 
-from electrum_dash import transaction
-from electrum_dash.util import bh2u, bfh
+from electrum_trc import transaction
+from electrum_trc.util import bh2u, bfh
 
 from . import SequentialTestCase
 
@@ -187,9 +187,9 @@ WRONG_SPEC_TX = (  # Tx version < 3
     '4d22769c3a4f90b2dcd0de88ac00000000')
 
 
-class TestDashSpecTxSerialization(SequentialTestCase):
+class TestTerracoinSpecTxSerialization(SequentialTestCase):
 
-    def test_dash_tx_v2(self):
+    def test_terracoin_tx_v2(self):
         tx = transaction.Transaction(V2_TX)
         deser = tx.deserialize()
         assert deser['version'] == 2
@@ -198,7 +198,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == V2_TX
 
-    def test_dash_tx_cb_tx(self):
+    def test_terracoin_tx_cb_tx(self):
         tx = transaction.Transaction(CB_TX)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -213,7 +213,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == CB_TX
 
-    def test_dash_tx_cb_tx_v2(self):
+    def test_terracoin_tx_cb_tx_v2(self):
         tx = transaction.Transaction(CB_TX_V2)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -231,7 +231,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == CB_TX_V2
 
-    def test_dash_tx_pro_reg_tx(self):
+    def test_terracoin_tx_pro_reg_tx(self):
         tx = transaction.Transaction(PRO_REG_TX)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -270,7 +270,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == PRO_REG_TX
 
-    def test_dash_tx_pro_up_serv_tx(self):
+    def test_terracoin_tx_pro_up_serv_tx(self):
         tx = transaction.Transaction(PRO_UP_SERV_TX)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -298,7 +298,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == PRO_UP_SERV_TX
 
-    def test_dash_tx_pro_up_reg_tx(self):
+    def test_terracoin_tx_pro_up_reg_tx(self):
         tx = transaction.Transaction(PRO_UP_REG_TX)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -329,7 +329,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == PRO_UP_REG_TX
 
-    def test_dash_tx_pro_up_rev_tx(self):
+    def test_terracoin_tx_pro_up_rev_tx(self):
         tx = transaction.Transaction(PRO_UP_REV_TX)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -353,7 +353,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == PRO_UP_REV_TX
 
-    def test_dash_tx_sub_tx_register(self):
+    def test_terracoin_tx_sub_tx_register(self):
         tx = transaction.Transaction(SUB_TX_REGISTER)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -375,7 +375,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == SUB_TX_REGISTER
 
-    def test_dash_tx_sub_tx_topup(self):
+    def test_terracoin_tx_sub_tx_topup(self):
         tx = transaction.Transaction(SUB_TX_TOPUP)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -389,7 +389,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == SUB_TX_TOPUP
 
-    def test_dash_tx_sub_tx_reset_key(self):
+    def test_terracoin_tx_sub_tx_reset_key(self):
         tx = transaction.Transaction(SUB_TX_RESET_KEY)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -417,7 +417,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == SUB_TX_RESET_KEY
 
-    def test_dash_tx_sub_tx_close_account(self):
+    def test_terracoin_tx_sub_tx_close_account(self):
         tx = transaction.Transaction(SUB_TX_CLOSE_ACCOUNT)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -441,7 +441,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == SUB_TX_CLOSE_ACCOUNT
 
-    def test_dash_tx_unknown_spec_tx(self):
+    def test_terracoin_tx_unknown_spec_tx(self):
         tx = transaction.Transaction(UNKNOWN_SPEC_TX)
         deser = tx.deserialize()
         assert deser['version'] == 3
@@ -457,7 +457,7 @@ class TestDashSpecTxSerialization(SequentialTestCase):
         ser = tx.serialize()
         assert ser == UNKNOWN_SPEC_TX
 
-    def test_dash_tx_wrong_spec_tx(self):
+    def test_terracoin_tx_wrong_spec_tx(self):
         tx = transaction.Transaction(WRONG_SPEC_TX)
         deser = tx.deserialize()
         assert deser['version'] == 12255234

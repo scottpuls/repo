@@ -7,15 +7,15 @@ from decimal import Decimal
 import time
 
 from io import StringIO
-from electrum_dash.storage import WalletStorage
-from electrum_dash.json_db import FINAL_SEED_VERSION
-from electrum_dash.wallet import (Abstract_Wallet, Standard_Wallet,
+from electrum_trc.storage import WalletStorage
+from electrum_trc.json_db import FINAL_SEED_VERSION
+from electrum_trc.wallet import (Abstract_Wallet, Standard_Wallet,
                                   create_new_wallet,
                                   restore_wallet_from_text, Imported_Wallet)
-from electrum_dash.exchange_rate import ExchangeBase, FxThread
-from electrum_dash.util import TxMinedInfo
-from electrum_dash.bitcoin import COIN
-from electrum_dash.json_db import JsonDB
+from electrum_trc.exchange_rate import ExchangeBase, FxThread
+from electrum_trc.util import TxMinedInfo
+from electrum_trc.bitcoin import COIN
+from electrum_trc.json_db import JsonDB
 
 from . import SequentialTestCase
 
@@ -180,41 +180,41 @@ class TestCreateRestoreWallet(WalletTestCase):
         self.assertEqual(passphrase, wallet.keystore.get_passphrase(password))
         self.assertEqual(text, wallet.keystore.get_seed(password))
         self.assertEqual(encrypt_file, wallet.storage.is_encrypted())
-        self.assertEqual('XdDHzW6aTeuQsraNXeEsPy5gAv1nUz7Y7Q', wallet.get_receiving_addresses()[0])
+        self.assertEqual('13XTAFSgVwgpiuynfkveYSPtLaS6XShvMW', wallet.get_receiving_addresses()[0])
 
     def test_restore_wallet_from_text_xpub(self):
         text = 'xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ'
         d = restore_wallet_from_text(text, path=self.wallet_path, network=None, gap_limit=1)
         wallet = d['wallet']  # type: Standard_Wallet
         self.assertEqual(text, wallet.keystore.get_master_public_key())
-        self.assertEqual('XmQ3Tn67Fgs7bwNXthtiEnBFh7ZeDG3aw2', wallet.get_receiving_addresses()[0])
+        self.assertEqual('1BiCdXSDHyeXSzmx2paVPFVTrmyx7BeCGD', wallet.get_receiving_addresses()[0])
 
     def test_restore_wallet_from_text_xprv(self):
         text = 'xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1xe8fs'
         d = restore_wallet_from_text(text, path=self.wallet_path, network=None, gap_limit=1)
         wallet = d['wallet']  # type: Standard_Wallet
         self.assertEqual(text, wallet.keystore.get_master_private_key(password=None))
-        self.assertEqual('XmQ3Tn67Fgs7bwNXthtiEnBFh7ZeDG3aw2', wallet.get_receiving_addresses()[0])
+        self.assertEqual('1BiCdXSDHyeXSzmx2paVPFVTrmyx7BeCGD', wallet.get_receiving_addresses()[0])
 
     def test_restore_wallet_from_text_addresses(self):
-        text = 'XdjwdihsyoLpoCHFUpd8x3iH1rsMsS2q5P Xdt8NqE5wSX9ytfP958t4tKdXoZDo6Bm6T'
+        text = '17azqT8T16coRmWKYFj3UjzJuxiYrYFRBR 1GXgZ5Qi6gmXTHVSpUPZLy4Ci2nbfb3ZNb'
         d = restore_wallet_from_text(text, path=self.wallet_path, network=None)
         wallet = d['wallet']  # type: Imported_Wallet
-        self.assertEqual('XdjwdihsyoLpoCHFUpd8x3iH1rsMsS2q5P', wallet.get_receiving_addresses()[0])
+        self.assertEqual('17azqT8T16coRmWKYFj3UjzJuxiYrYFRBR', wallet.get_receiving_addresses()[0])
         self.assertEqual(2, len(wallet.get_receiving_addresses()))
         # also test addr deletion
-        wallet.delete_address('Xdt8NqE5wSX9ytfP958t4tKdXoZDo6Bm6T')
+        wallet.delete_address('1GXgZ5Qi6gmXTHVSpUPZLy4Ci2nbfb3ZNb')
         self.assertEqual(1, len(wallet.get_receiving_addresses()))
 
     def test_restore_wallet_from_text_privkeys(self):
-        text = 'p2pkh:XGx8LpkmLRv9RiMvpYx965BCaQKQbeMVVqgAh7B5SQVdosQiKJ4i p2pkh:XEn9o6oayjsRmoEQwDbvkrWVvjRNqPj3xNskJJPAKraJTrWuutwd'
+        text = 'p2pkh:KzMFjMC2MPadjvX5Cd7b8AKKjjpBSoRKUTpoAtN6B3J9ezWYyXS6 p2pkh:Kzj8VjwpZ99bQqVeUiRXrKuX9mLr1o6sWxFMCBJn1umC38BMiQTD'
         d = restore_wallet_from_text(text, path=self.wallet_path, network=None)
         wallet = d['wallet']  # type: Imported_Wallet
         addr0 = wallet.get_receiving_addresses()[0]
-        self.assertEqual('Xci5KnMVkHrqBQk9cU4jwmzJfgaTPopHbz', addr0)
-        self.assertEqual('p2pkh:XEn9o6oayjsRmoEQwDbvkrWVvjRNqPj3xNskJJPAKraJTrWuutwd',
+        self.assertEqual('17azqT8T16coRmWKYFj3UjzJuxiYrYFRBR', addr0)
+        self.assertEqual('p2pkh:KzMFjMC2MPadjvX5Cd7b8AKKjjpBSoRKUTpoAtN6B3J9ezWYyXS6',
                          wallet.export_private_key(addr0, password=None)[0])
         self.assertEqual(2, len(wallet.get_receiving_addresses()))
         # also test addr deletion
-        wallet.delete_address('XmQ3Tn67Fgs7bwNXthtiEnBFh7ZeDG3aw2')
+        wallet.delete_address('1GXgZ5Qi6gmXTHVSpUPZLy4Ci2nbfb3ZNb')
         self.assertEqual(1, len(wallet.get_receiving_addresses()))

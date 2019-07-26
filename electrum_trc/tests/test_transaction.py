@@ -1,8 +1,8 @@
-from electrum_dash import transaction
-from electrum_dash.transaction import TxOutputForUI, tx_from_str
-from electrum_dash.bitcoin import TYPE_ADDRESS
-from electrum_dash.keystore import xpubkey_to_address
-from electrum_dash.util import bh2u, bfh
+from electrum_trc import transaction
+from electrum_trc.transaction import TxOutputForUI, tx_from_str
+from electrum_trc.bitcoin import TYPE_ADDRESS
+from electrum_trc.keystore import xpubkey_to_address
+from electrum_trc.util import bh2u, bfh
 
 from . import SequentialTestCase, TestCaseForTestnet
 from .test_bitcoin import needs_test_with_all_ecc_implementations
@@ -61,7 +61,7 @@ class TestTransaction(SequentialTestCase):
         expected = {
             'inputs': [{
                 'type': 'p2pkh',
-                'address': 'XdjwdihsyoLpoCHFUpd8x3iH1rsMsS2q5P',
+                'address': '1446oU3z268EeFgfcwJv6X2VBXHfoYxfuD',
                 'num_sig': 1,
                 'prevout_hash': '3140eb24b43386f35ba69e3875eb6c93130ac66201d01c58f598defc949a5c2a',
                 'prevout_n': 0,
@@ -72,7 +72,7 @@ class TestTransaction(SequentialTestCase):
                 'x_pubkeys': ['ff0488b21e03ef2afea18000000089689bff23e1e7fb2f161daa37270a97a3d8c2e537584b2d304ecb47b86d21fc021b010d3bd425f8cf2e04824bfdf1f1f5ff1d51fadd9a41f9e3fb8dd3403b1bfe00000000']}],
             'lockTime': 0,
             'outputs': [{
-                'address': 'Xdt8NqE5wSX9ytfP958t4tKdXoZDo6Bm6T',
+                'address': '14CHYaaByjJZpx4oHBpfDMdqhTyXnZ3kVs',
                 'prevout_n': 0,
                 'scriptPubKey': '76a914230ac37834073a42146f11ef8414ae929feaafc388ac',
                 'type': TYPE_ADDRESS,
@@ -87,11 +87,11 @@ class TestTransaction(SequentialTestCase):
         self.assertEqual(tx.deserialize(), None)
 
         self.assertEqual(tx.as_dict(), {'hex': unsigned_blob, 'complete': False, 'final': True})
-        self.assertEqual(tx.get_outputs_for_UI(), [TxOutputForUI('Xdt8NqE5wSX9ytfP958t4tKdXoZDo6Bm6T', 1000000)])
+        self.assertEqual(tx.get_outputs_for_UI(), [TxOutputForUI('14CHYaaByjJZpx4oHBpfDMdqhTyXnZ3kVs', 1000000)])
 
-        self.assertTrue(tx.has_address('Xdt8NqE5wSX9ytfP958t4tKdXoZDo6Bm6T'))
-        self.assertTrue(tx.has_address('XdjwdihsyoLpoCHFUpd8x3iH1rsMsS2q5P'))
-        self.assertFalse(tx.has_address('Xn6ZqLcuKpYoSkiXKmLMWKtoF2sNExHwjT'))
+        self.assertTrue(tx.has_address('14CHYaaByjJZpx4oHBpfDMdqhTyXnZ3kVs'))
+        self.assertTrue(tx.has_address('1446oU3z268EeFgfcwJv6X2VBXHfoYxfuD'))
+        self.assertFalse(tx.has_address('1CQj15y1N7LDHp7wTt28eoD1QhHgFgxECH'))
 
         self.assertEqual(tx.serialize(), unsigned_blob)
 
@@ -115,7 +115,7 @@ class TestTransaction(SequentialTestCase):
                 'type': 'unknown'}],
             'lockTime': 0,
             'outputs': [{
-                'address': 'Xdt8NqE5wSX9ytfP958t4tKdXoZDo6Bm6T',
+                'address': '14CHYaaByjJZpx4oHBpfDMdqhTyXnZ3kVs',
                 'prevout_n': 0,
                 'scriptPubKey': '76a914230ac37834073a42146f11ef8414ae929feaafc388ac',
                 'type': TYPE_ADDRESS,
@@ -141,8 +141,8 @@ class TestTransaction(SequentialTestCase):
 
     def test_estimated_output_size(self):
         estimated_output_size = transaction.Transaction.estimated_output_size
-        self.assertEqual(estimated_output_size('Xdt8NqE5wSX9ytfP958t4tKdXoZDo6Bm6T'), 34)
-        self.assertEqual(estimated_output_size('7WHUEVtMDLeereT5r4ZoNKjr3MXr4gqfon'), 32)
+        self.assertEqual(estimated_output_size('14gcRovpkCoGkCNBivQBvw7eso7eiNAbxG'), 34)
+        self.assertEqual(estimated_output_size('35ZqQJcBQMZ1rsv8aSuJ2wkC7ohUCQMJbT'), 32)
 
     def test_errors(self):
         with self.assertRaises(TypeError):
@@ -153,7 +153,7 @@ class TestTransaction(SequentialTestCase):
 
     def test_parse_xpub(self):
         res = xpubkey_to_address('fe4e13b0f311a55b8a5db9a32e959da9f011b131019d4cebe6141b9e2c93edcbfc0954c358b062a9f94111548e50bde5847a3096b8b7872dcffadb0e9579b9017b01000200')
-        self.assertEqual(res, ('04ee98d63800824486a1cf5b4376f2f574d86e0a3009a6448105703453f3368e8e1d8d090aaecdd626a45cc49876709a3bbb6dc96a4311b3cac03e225df5f63dfc', 'XjNytJHxbRZCF4s7MzaKvw4Rrf6bPRuPnW'))
+        self.assertEqual(res, ('04ee98d63800824486a1cf5b4376f2f574d86e0a3009a6448105703453f3368e8e1d8d090aaecdd626a45cc49876709a3bbb6dc96a4311b3cac03e225df5f63dfc', '19h943e4diLc68GXW7G75QNe2KWuMu7BaJ'))
 
     def test_version_field(self):
         tx = transaction.Transaction(v2_blob)
@@ -184,14 +184,14 @@ class TestTransaction(SequentialTestCase):
         SCRIPT = transaction.TYPE_SCRIPT
 
         # base58 p2pkh
-        self.assertEqual((ADDR, 'XeNTG4aihv1ru8xmaoiQnToSi8hLiTTNbh'), addr_from_script('76a91428662c67561b95c79d2257d2a93d9d151c977e9188ac'))
-        self.assertEqual((ADDR, 'XkvgWFLxVmDaVkUF8bFE2QXP4f5C2KKWEg'), addr_from_script('76a914704f4b81cadb7bf7e68c08cd3657220f680f863c88ac'))
+        self.assertEqual((ADDR, '14gcRovpkCoGkCNBivQBvw7eso7eiNAbxG'), addr_from_script('76a91428662c67561b95c79d2257d2a93d9d151c977e9188ac'))
+        self.assertEqual((ADDR, '1BEqfzh4Y3zzLosfGhw1AsqbEKVW6e1qHv'), addr_from_script('76a914704f4b81cadb7bf7e68c08cd3657220f680f863c88ac'))
         # almost but not quite
         self.assertEqual((SCRIPT, '76a9130000000000000000000000000000000000000088ac'), addr_from_script('76a9130000000000000000000000000000000000000088ac'))
 
         # base58 p2sh
-        self.assertEqual((ADDR, '7WHUEVtMDLeereT5r4ZoNKjr3MXr4gqfon'), addr_from_script('a9142a84cf00d47f699ee7bbc1dea5ec1bdecb4ac15487'))
-        self.assertEqual((ADDR, '7phNpVKta6kkbP24HfvvQVeHEmgBQYiJCB'), addr_from_script('a914f47c8954e421031ad04ecd8e7752c9479206b9d387'))
+        self.assertEqual((ADDR, '35ZqQJcBQMZ1rsv8aSuJ2wkC7ohUCQMJbT'), addr_from_script('a9142a84cf00d47f699ee7bbc1dea5ec1bdecb4ac15487'))
+        self.assertEqual((ADDR, '3PyjzJ3im7f7bcV724GR57edKDqoZvH7Ji'), addr_from_script('a914f47c8954e421031ad04ecd8e7752c9479206b9d387'))
         # almost but not quite
         self.assertEqual((SCRIPT, 'a912f47c8954e421031ad04ecd8e7752c947920687'), addr_from_script('a912f47c8954e421031ad04ecd8e7752c947920687'))
 
