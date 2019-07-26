@@ -352,7 +352,7 @@ def script_to_address(script: str, *, net=None) -> str:
 def address_to_script(addr: str, *, net=None) -> str:
     if net is None: net = constants.net
     if not is_address(addr, net=net):
-        raise BitcoinException(f"invalid bitcoin address: {addr}")
+        raise BitcoinException(f"invalid terracoin address: {addr}")
     addrtype, hash_160_ = b58_address_to_hash160(addr)
     if addrtype == net.ADDRTYPE_P2PKH:
         script = bytes([opcodes.OP_DUP, opcodes.OP_HASH160]).hex()
