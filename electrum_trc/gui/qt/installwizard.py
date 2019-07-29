@@ -35,8 +35,8 @@ MSG_HW_STORAGE_ENCRYPTION = _("Set wallet file encryption.") + '\n'\
                           + _("Note: If you enable this setting, you will need your hardware device to open your wallet.")
 WIF_HELP_TEXT = (_('WIF keys are typed in Terracoin Electrum, based on script type.') + '\n\n' +
                  _('A few examples') + ':\n' +
-                 'p2pkh:XERBBcaPf5D5...       \t-> XhGqfhnL...\n')
-# note: full key is XERBBcaPf5D5oFXTEP7TdPWLem5ktc2Zr3AhhQhHVQaF49fDP6tN
+                 'p2pkh:KzMFjMC2MPad...       \t-> 17azqT8T...\n')
+# note: full key is KzMFjMC2MPadjvX5Cd7b8AKKjjpBSoRKUTpoAtN6B3J9ezWYyXS6
 MSG_PASSPHRASE_WARN_ISSUE4566 = _("Warning") + ": "\
                               + _("You have multiple consecutive whitespaces or leading/trailing "
                                   "whitespaces in your passphrase.") + " " \
