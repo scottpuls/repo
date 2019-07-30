@@ -74,9 +74,7 @@ def deserialize_header(s: bytes, height: int, expect_trailing_data=False, start_
     h['nonce'] = hex_to_int(s[start_position+76:start_position+80])
     h['block_height'] = height
 
-    #if auxpow.auxpow_active(h) and height > constants.net.max_checkpoint():
-    # Don't limit as blocks pre checkpoint still have auxpow data
-    if height > auxpow.MIN_AUXPOW_HEIGHT:
+    if auxpow.auxpow_active(h) and height > constants.net.max_checkpoint():
         if expect_trailing_data:
             h['auxpow'], start_position = auxpow.deserialize_auxpow_header(h, s, expect_trailing_data=True, start_position=start_position+HEADER_SIZE)
         else:
@@ -326,64 +324,38 @@ class Blockchain(Logger):
                 raise Exception(f"insufficient proof of work: {block_hash_as_num} vs target {target}")
 
     def verify_chunk(self, index: int, data: bytes) -> bytes:
-        import binascii
-        self.logger.info(f'Blockchain.verify_chunk: data: {binascii.hexlify(data)}')
         stripped = bytearray()
         start_height = index * 2016
         prev_hash = self.get_hash(start_height - 1)
         target = self.get_target((index-1) * 2016)
         chunk_headers = {'empty': True}
-        if start_height > auxpow.MIN_AUXPOW_HEIGHT:
-            start_position = 0
-            i = 0
-            while start_position < len(data):
-                height = start_height + i
-                try:
-                    expected_header_hash = self.get_hash(height)
-                except MissingHeader:
-                    expected_header_hash = None
+        start_position = 0
+        i = 0
+        while start_position < len(data):
+            height = start_height + i
+            try:
+                expected_header_hash = self.get_hash(height)
+            except MissingHeader:
+                expected_header_hash = None
 
-                # Strip auxpow header for disk
-                raw_header = data[start_position:start_position+HEADER_SIZE]
-                self.logger.info(f'Blockchain.verify_chunk: raw_header {height}: {binascii.hexlify(raw_header)}')
-                stripped.extend(raw_header)
+            # Strip auxpow header for disk
+            raw_header = data[start_position:start_position+HEADER_SIZE]
+            stripped.extend(raw_header)
 
-                height = index * 2016 + i
-                header, start_position = deserialize_header(data, height, expect_trailing_data=True, start_position=start_position)
-                self.logger.info(f'Blockchain.verify_chunk: new_startpos: {start_position}, header: {header}')
-                if height > POW_DGW3_HEIGHT:
-                    target = self.get_target(height, chunk_headers)
-                self.verify_header(header, prev_hash, target, expected_header_hash)
-                chunk_headers[height] = header
-                if i == 0:
-                    chunk_headers['min_height'] = height
-                    chunk_headers['empty'] = False
-                chunk_headers['max_height'] = height
-                prev_hash = hash_header(header)
+            height = index * 2016 + i
+            header, start_position = deserialize_header(data, height, expect_trailing_data=True, start_position=start_position)
+            if height > POW_DGW3_HEIGHT:
+                target = self.get_target(height, chunk_headers)
+            self.verify_header(header, prev_hash, target, expected_header_hash)
+            chunk_headers[height] = header
+            if i == 0:
+                chunk_headers['min_height'] = height
+                chunk_headers['empty'] = False
+            chunk_headers['max_height'] = height
+            prev_hash = hash_header(header)
 
-                i = i + 1
-            return bytes(stripped)
-        else:
-            num = len(data) // HEADER_SIZE
-            for i in range(num):
-                height = start_height + i
-                try:
-                    expected_header_hash = self.get_hash(height)
-                except MissingHeader:
-                    expected_header_hash = None
-                raw_header = data[i*HEADER_SIZE : (i+1)*HEADER_SIZE]
-                height = index * 2016 + i
-                header = deserialize_header(raw_header, height)
-                if height > POW_DGW3_HEIGHT:
-                    target = self.get_target(height, chunk_headers)
-                self.verify_header(header, prev_hash, target, expected_header_hash)
-                chunk_headers[height] = header
-                if i == 0:
-                    chunk_headers['min_height'] = height
-                    chunk_headers['empty'] = False
-                chunk_headers['max_height'] = height
-                prev_hash = hash_header(header)
-            return data
+            i = i + 1
+        return bytes(stripped)
 
     @with_lock
     def path(self):
