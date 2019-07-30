@@ -87,8 +87,8 @@ class TestMasternode(unittest.TestCase):
         self.assertEqual(expected, msg)
 
     def test_create_and_sign(self):
-        collateral_pub = '038ae57bd0fa5b45640e771614ec571c7326a2266c78bb444f1971c85188411ba1' # XahPxwmCuKjPq69hzVxP18V1eASwDWbUrn
-        delegate_pub = '02526201c87c1b4630aabbd04572eec3e2545e442503e57e60880fafcc1f684dbc' # Xx2nSdhaT7c9SREKBPAgzpkhu518XFgkgh
+        collateral_pub = '038ae57bd0fa5b45640e771614ec571c7326a2266c78bb444f1971c85188411ba1' # 1Feczj12KEioQTrXhd4zUUdmijxzwXfdcE
+        delegate_pub = '02526201c87c1b4630aabbd04572eec3e2545e442503e57e60880fafcc1f684dbc' # 1NLwcP3gVQPZHUdjKVrU9J4v4jRSYsB4Dj
         protocol_version = 70103
 
         ip = '0.0.0.0'
@@ -107,7 +107,7 @@ class TestMasternode(unittest.TestCase):
         announce.last_ping.sign(delegate_wif, bfh(delegate_pub), 1461858375)
         sig = announce.sign(collateral_wif, 1461858375)
 
-        address = 'XahPxwmCuKjPq69hzVxP18V1eASwDWbUrn'
+        address = '1Feczj12KEioQTrXhd4zUUdmijxzwXfdcE'
         self.assertTrue(announce.verify(address))
         self.assertTrue(ecc.verify_message_with_address
                             (address, sig, announce.serialize_for_sig()))
@@ -185,8 +185,8 @@ class TestMasternode70210(unittest.TestCase):
         self.assertEqual(expected, msg)
 
     def test_create_and_sign(self):
-        collateral_pub = '038ae57bd0fa5b45640e771614ec571c7326a2266c78bb444f1971c85188411ba1' # XahPxwmCuKjPq69hzVxP18V1eASwDWbUrn
-        delegate_pub = '02526201c87c1b4630aabbd04572eec3e2545e442503e57e60880fafcc1f684dbc' # Xx2nSdhaT7c9SREKBPAgzpkhu518XFgkgh
+        collateral_pub = '038ae57bd0fa5b45640e771614ec571c7326a2266c78bb444f1971c85188411ba1' # 1Feczj12KEioQTrXhd4zUUdmijxzwXfdcE
+        delegate_pub = '02526201c87c1b4630aabbd04572eec3e2545e442503e57e60880fafcc1f684dbc' # 1NLwcP3gVQPZHUdjKVrU9J4v4jRSYsB4Dj
         protocol_version = 70210
 
         ip = '0.0.0.0'
@@ -206,7 +206,7 @@ class TestMasternode70210(unittest.TestCase):
         announce.last_ping.sign(delegate_wif, bfh(delegate_pub), 1461858375)
         sig = announce.sign(collateral_wif, 1461858375)
 
-        address = 'XahPxwmCuKjPq69hzVxP18V1eASwDWbUrn'
+        address = '1Feczj12KEioQTrXhd4zUUdmijxzwXfdcE'
         self.assertTrue(announce.verify(address))
         self.assertTrue(ecc.verify_message_with_address
                             (address, sig, announce.serialize_for_sig()))
@@ -228,8 +228,8 @@ class TestMasternodePing(unittest.TestCase):
         current_time = 1461858375
         ping = MasternodePing(vin=vin, block_hash=block_hash, sig_time=current_time)
 
-        expected_sig = 'H6k0M7G15GLnJ7i7Zcs8uCHcVRsn1P0hKK4lVMkgY4byaOvUECCsfxA9ktUiFT8scfFYYb/sxkcD8ifU/SEnBUg='
-        wif = 'XCbhXBc2N9q8kxqBF41rSuLWVpVVbDm7P1oPv9GxcrS9QXYBWZkB'
+        expected_sig = 'H8YQ6ko0zm0ZWV7qHxOBiJA+lw859wATbWOXqNuOnJsGVGWmBWOnipaEOUJPMFeq51GaNcrM3nDjxw1kcCwqODk='
+        wif = 'L1TnU2zbNaAqMoVh65Cyvmcjzbrj41Gs9iTLcWbpJCMynXuap6UN'
         sig = ping.sign(wif, current_time = current_time)
         address = bitcoin.address_from_private_key(wif)
         self.assertTrue(ecc.verify_message_with_address
@@ -246,11 +246,11 @@ class TestNetworkAddr(unittest.TestCase):
 class TestParseMasternodeConf(unittest.TestCase):
     def test_parse(self):
         lines = [
-            'mn1 127.0.0.2:19999 XJo71yhAvayar2geJiJocDMXVSwQCm14gNZvMmk7Pc1M8Bv8Ev7L 2bcd3c84c84f87eaa86e4e56834c92927a07f9e18718810b92e0d0324456a67c 0',
+            'mn1 127.0.0.2:19999 L1TnU2zbNaAqMoVh65Cyvmcjzbrj41Gs9iTLcWbpJCMynXuap6UN 2bcd3c84c84f87eaa86e4e56834c92927a07f9e18718810b92e0d0324456a67c 0',
         ]
         conf_lines = parse_masternode_conf(lines)
         expected = [
-            MasternodeConfLine('mn1', '127.0.0.2:19999', 'XJo71yhAvayar2geJiJocDMXVSwQCm14gNZvMmk7Pc1M8Bv8Ev7L', '2bcd3c84c84f87eaa86e4e56834c92927a07f9e18718810b92e0d0324456a67c', 0),
+            MasternodeConfLine('mn1', '127.0.0.2:19999', 'L1TnU2zbNaAqMoVh65Cyvmcjzbrj41Gs9iTLcWbpJCMynXuap6UN', '2bcd3c84c84f87eaa86e4e56834c92927a07f9e18718810b92e0d0324456a67c', 0),
         ]
 
         for i, conf in enumerate(conf_lines):
