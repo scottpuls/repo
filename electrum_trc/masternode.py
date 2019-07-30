@@ -187,7 +187,7 @@ class MasternodeAnnounce(object):
 
     Attributes:
         - alias: Alias to help the user identify this masternode.
-        - vin: 5K Terracoin input (outpoint: 5K Terracoin input for proto > 70208).
+        - vin: 5K Terracoin input (outpoint: 5K Terracoin input for proto >= 70208).
         - addr: Address that the masternode can be reached at.
         - collateral_key: Key that can spend the 5K Terracoin input.
         - delegate_key: Key that the masternode will sign messages with.
@@ -260,7 +260,7 @@ class MasternodeAnnounce(object):
             sig_time = vds.read_int64()
 
             protocol_version = vds.read_uint32()
-            if protocol_version in [70209, 70210]:
+            if protocol_version in [70208, 70209, 70210]:
                 return True
             else:
                 return False
