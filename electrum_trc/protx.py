@@ -178,10 +178,11 @@ class ProTxManager(Logger):
             if not self.network.is_connected():
                 return
             self.protx_subscribed = True
-            self.network.register_callback(self.on_protx_diff,
-                                           ['protx-diff'])
-            self.network.register_callback(self.on_protx_info,
-                                           ['protx-info'])
+            # Not till Terracoin has this enabled
+            #self.network.register_callback(self.on_protx_diff,
+            #                               ['protx-diff'])
+            #self.network.register_callback(self.on_protx_info,
+            #                               ['protx-info'])
             self.network.register_callback(self.on_network_updated,
                                            ['network_updated'])
             coro = self.network.request_protx_diff(self.protx_base_height)
@@ -192,8 +193,9 @@ class ProTxManager(Logger):
         if self.network:
             if self.protx_subscribed:
                 self.protx_subscribed = False
-                self.network.unregister_callback(self.on_protx_diff)
-                self.network.unregister_callback(self.on_protx_info)
+                # Not till Terracoin has this enabled
+                #self.network.unregister_callback(self.on_protx_diff)
+                #self.network.unregister_callback(self.on_protx_info)
                 self.network.unregister_callback(self.on_network_updated)
             if self.network_subscribed:
                 self.network_subscribed = False

@@ -179,7 +179,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         self.receive_tab = self.create_receive_tab()
         self.addresses_tab = self.create_addresses_tab()
         self.utxo_tab = self.create_utxo_tab()
-        #self.dip3_tab = create_dip3_tab(self, wallet)
+        self.dip3_tab = create_dip3_tab(self, wallet)
         self.console_tab = self.create_console_tab()
         self.contacts_tab = self.create_contacts_tab()
         # Disabled until API is stable.
@@ -202,7 +202,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         add_optional_tab(tabs, self.utxo_tab, read_QIcon("tab_coins.png"), _("Co&ins"), "utxo")
         add_optional_tab(tabs, self.contacts_tab, read_QIcon("tab_contacts.png"), _("Con&tacts"), "contacts")
         # Terracoin not on DIP3 yet
-        #add_optional_tab(tabs, self.dip3_tab, read_QIcon("tab_dip3.png"), _("&DIP3"), "dip3")
+        add_optional_tab(tabs, self.dip3_tab, read_QIcon("tab_dip3.png"), _("&DIP3"), "dip3")
         add_optional_tab(tabs, self.console_tab, read_QIcon("tab_console.png"), _("Con&sole"), "console")
 
         tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -221,7 +221,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         QShortcut(QKeySequence("F5"), self, self.update_wallet)
         QShortcut(QKeySequence("Ctrl+PgUp"), self, lambda: wrtabs.setCurrentIndex((wrtabs.currentIndex() - 1)%wrtabs.count()))
         QShortcut(QKeySequence("Ctrl+PgDown"), self, lambda: wrtabs.setCurrentIndex((wrtabs.currentIndex() + 1)%wrtabs.count()))
-        #QShortcut(QKeySequence("Ctrl+M"), self, self.show_masternode_dialog)
+        QShortcut(QKeySequence("Ctrl+M"), self, self.show_masternode_dialog)
 
         for i in range(wrtabs.count()):
             QShortcut(QKeySequence("Alt+" + str(i + 1)), self, lambda i=i: wrtabs.setCurrentIndex(i))
@@ -287,8 +287,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
     @pyqtSlot()
     def on_tabs_current_changed(self):
         cur_widget = self.tabs.currentWidget()
-        #if cur_widget == self.dip3_tab and not cur_widget.have_been_shown:
-        #    cur_widget.on_first_showing()
+        if cur_widget == self.dip3_tab and not cur_widget.have_been_shown:
+            cur_widget.on_first_showing()
 
     def on_history(self, b):
         self.wallet.clear_coin_price_cache()
@@ -449,8 +449,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
     def load_wallet(self, wallet):
         wallet.thread = TaskThread(self, self.on_error)
         self.masternode_manager = MasternodeManager(self.wallet, self.config)
-        #self.dip3_tab.w_model.reload_data()
-        #self.dip3_tab.update_wallet_label()
+        self.dip3_tab.w_model.reload_data()
+        self.dip3_tab.update_wallet_label()
         self.update_recently_visited(wallet.storage.path)
         self.need_update.set()
         # Once GUI has been initialized check if we want to announce something since the callback has been called before the GUI was initialized
@@ -646,12 +646,12 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         add_toggle_action(view_menu, self.addresses_tab)
         add_toggle_action(view_menu, self.utxo_tab)
         add_toggle_action(view_menu, self.contacts_tab)
-        #add_toggle_action(view_menu, self.dip3_tab)
+        add_toggle_action(view_menu, self.dip3_tab)
         add_toggle_action(view_menu, self.console_tab)
 
         # Disable for Terracoin till DIP3 is active
-        #wallet_menu.addSeparator()
-        #wallet_menu.addAction(_("Masternodes"), self.show_masternode_dialog)
+        wallet_menu.addSeparator()
+        wallet_menu.addAction(_("Masternodes"), self.show_masternode_dialog)
 
         tools_menu = menubar.addMenu(_("&Tools"))
 
