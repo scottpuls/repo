@@ -3060,14 +3060,14 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         unit_combo.currentIndexChanged.connect(lambda x: on_unit(x, nz))
         gui_widgets.append((unit_label, unit_combo))
 
-        show_dip2_cb = QCheckBox(_('Show DIP2 tx type in wallet history:'))
-        show_dip2_cb.setChecked(self.config.get('show_dip2_tx_type', False))
-        def on_dip2_state_changed(x):
-            show_dip2 = (x == Qt.Checked)
-            self.config.set_key('show_dip2_tx_type', show_dip2, True)
-            self.history_model.refresh('on_dip2')
-        show_dip2_cb.stateChanged.connect(on_dip2_state_changed)
-        gui_widgets.append((show_dip2_cb, None))
+        #show_dip2_cb = QCheckBox(_('Show DIP2 tx type in wallet history:'))
+        #show_dip2_cb.setChecked(self.config.get('show_dip2_tx_type', False))
+        #def on_dip2_state_changed(x):
+        #    show_dip2 = (x == Qt.Checked)
+        #    self.config.set_key('show_dip2_tx_type', show_dip2, True)
+        #    self.history_model.refresh('on_dip2')
+        #show_dip2_cb.stateChanged.connect(on_dip2_state_changed)
+        #gui_widgets.append((show_dip2_cb, None))
 
         block_explorers = sorted(util.block_explorer_info().keys())
         msg = _('Choose which online block explorer to use for functions that open a web browser')
