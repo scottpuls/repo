@@ -20,4 +20,10 @@ fi
 pushd ./electrum_trc/gui/kivy/
 make theming
 make release
+# Fix for case insensitive filesystems
+if [ ! -f ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/python ]; then
+  mv ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/Python ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/Python.dir
+  mv ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/python.exe ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/python
+  make release
+fi
 popd
