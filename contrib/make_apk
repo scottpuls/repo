@@ -23,7 +23,8 @@ make release
 # Fix for case insensitive filesystems
 if [ ! -f ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/python ]; then
   mv ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/Python ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/Python.dir
-  mv ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/python.exe ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/python
+  mv ../../../.buildozer/android/platform/build/build/other_builds/hostpython3/desktop/hostpython3/native-build/python.exe ../../../.buildozer/android/platform/build/build/other_builds/hostpython4/desktop/hostpython3/native-build/python
+  rm -rf ../../../.buildozer/android/platform/build/build/other_builds/python3-libffi-openssl-sqlite3
   make release
 fi
 popd
