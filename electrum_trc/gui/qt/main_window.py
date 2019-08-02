@@ -201,7 +201,6 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         add_optional_tab(tabs, self.addresses_tab, read_QIcon("tab_addresses.png"), _("&Addresses"), "addresses")
         add_optional_tab(tabs, self.utxo_tab, read_QIcon("tab_coins.png"), _("Co&ins"), "utxo")
         add_optional_tab(tabs, self.contacts_tab, read_QIcon("tab_contacts.png"), _("Con&tacts"), "contacts")
-        # Terracoin not on DIP3 yet
         add_optional_tab(tabs, self.dip3_tab, read_QIcon("tab_dip3.png"), _("&DIP3"), "dip3")
         add_optional_tab(tabs, self.console_tab, read_QIcon("tab_console.png"), _("Con&sole"), "console")
 
@@ -234,6 +233,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         # network callbacks
         if self.network:
             self.network_signal.connect(self.on_network_qt)
+            self.gui_object.terracoin_net_sobj.main.connect(self.on_terracoin_net_qt)
             interests = ['wallet_updated', 'network_updated', 'blockchain_updated',
                          'new_transaction', 'status',
                          'banner', 'verified', 'fee', 'fee_histogram']
@@ -250,6 +250,12 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             self.new_fx_quotes_signal.connect(self.on_fx_quotes)
             self.new_fx_history_signal.connect(self.on_fx_history)
 
+            # terracoin net callbacks
+            self.network.terracoin_net.register_callback(self.on_terracoin_net,
+                                                         ['terracoin-net-updated',
+                                                          'terracoin-peers-updated'])
+            self.update_terracoin_net_status_btn()
+
         # update fee slider in case we missed the callback
         self.fee_slider.update()
         self.load_wallet(wallet)
@@ -260,10 +266,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             self.show_warning(self.wallet.storage.backup_message,
                               title=_('Information'))
 
-        if self.network.tor_auto_on and not self.network.tor_on:
+        if (self.network
+                and self.network.tor_auto_on and not self.network.tor_on):
             self.show_warning(self.network.tor_warn_msg +
                               self.network.tor_docs_uri_qt, rich_text=True)
-        self.tabs.currentChanged.connect(self.on_tabs_current_changed)
 
         # If the option hasn't been set yet
         if config.get('check_updates') is None:
@@ -283,12 +289,6 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             self._update_check_thread = UpdateCheckThread(self)
             self._update_check_thread.checked.connect(on_version_received)
             self._update_check_thread.start()
-
-    @pyqtSlot()
-    def on_tabs_current_changed(self):
-        cur_widget = self.tabs.currentWidget()
-        if cur_widget == self.dip3_tab and not cur_widget.have_been_shown:
-            cur_widget.on_first_showing()
 
     def on_history(self, b):
         self.wallet.clear_coin_price_cache()
@@ -403,6 +403,17 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             self.network_signal.emit(event, args)
         else:
             self.logger.info(f"unexpected network message: {event} {args}")
+
+    def on_terracoin_net(self, event, *args):
+        self.gui_object.terracoin_net_sobj.main.emit(event, args)
+
+    def on_terracoin_net_qt(self, event, args=None):
+        self.update_terracoin_net_status_btn()
+
+    def update_terracoin_net_status_btn(self):
+        net = self.network
+        icon = (net.terracoin_net.status_icon() if net else 'terracoin_net_off.png')
+        self.terracoin_net_button.setIcon(read_QIcon(icon))
 
     def on_network_qt(self, event, args=None):
         # Handle a network message in the GUI thread
@@ -649,7 +660,6 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         add_toggle_action(view_menu, self.dip3_tab)
         add_toggle_action(view_menu, self.console_tab)
 
-        # Disable for Terracoin till DIP3 is active
         wallet_menu.addSeparator()
         wallet_menu.addAction(_("Masternodes"), self.show_masternode_dialog)
 
@@ -2224,6 +2234,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         sb.addPermanentWidget(self.seed_button)
         self.status_button = StatusBarButton(read_QIcon("status_disconnected.png"), _("Network"), lambda: self.gui_object.show_network_dialog(self))
         sb.addPermanentWidget(self.status_button)
+        self.terracoin_net_button = StatusBarButton(read_QIcon('terracoin_net_0.png'), _("Terracoin Network"), lambda: self.gui_object.show_terracoin_net_dialog(self))
+        self.update_terracoin_net_status_btn()
+        sb.addPermanentWidget(self.terracoin_net_button)
         run_hook('create_status_bar', sb)
         self.setStatusBar(sb)
 
@@ -3060,14 +3073,14 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         unit_combo.currentIndexChanged.connect(lambda x: on_unit(x, nz))
         gui_widgets.append((unit_label, unit_combo))
 
-        #show_dip2_cb = QCheckBox(_('Show DIP2 tx type in wallet history:'))
-        #show_dip2_cb.setChecked(self.config.get('show_dip2_tx_type', False))
-        #def on_dip2_state_changed(x):
-        #    show_dip2 = (x == Qt.Checked)
-        #    self.config.set_key('show_dip2_tx_type', show_dip2, True)
-        #    self.history_model.refresh('on_dip2')
-        #show_dip2_cb.stateChanged.connect(on_dip2_state_changed)
-        #gui_widgets.append((show_dip2_cb, None))
+        show_dip2_cb = QCheckBox(_('Show DIP2 tx type in wallet history:'))
+        show_dip2_cb.setChecked(self.config.get('show_dip2_tx_type', False))
+        def on_dip2_state_changed(x):
+            show_dip2 = (x == Qt.Checked)
+            self.config.set_key('show_dip2_tx_type', show_dip2, True)
+            self.history_model.refresh('on_dip2')
+        show_dip2_cb.stateChanged.connect(on_dip2_state_changed)
+        gui_widgets.append((show_dip2_cb, None))
 
         block_explorers = sorted(util.block_explorer_info().keys())
         msg = _('Choose which online block explorer to use for functions that open a web browser')
@@ -3347,7 +3360,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             self.network.unregister_callback(self.on_network)
             self.network.unregister_callback(self.on_quotes)
             self.network.unregister_callback(self.on_history)
-        self.wallet.protx_manager.clean_up()
+            self.wallet.protx_manager.clean_up()
+            self.network.terracoin_net.unregister_callback(self.on_terracoin_net)
         self.config.set_key("is_maximized", self.isMaximized())
         if not self.isMaximized():
             g = self.geometry()

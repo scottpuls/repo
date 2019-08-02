@@ -98,6 +98,11 @@ class BCDataStream(object):
         self.input = None
         self.read_cursor = 0
 
+    def clear_and_set_bytes(self, _bytes):
+        self.read_cursor = 0
+        if self.input is None:
+            self.input = _bytes
+
     def write(self, _bytes):  # Initialize with string of _bytes
         if self.input is None:
             self.input = bytearray(_bytes)
@@ -134,9 +139,12 @@ class BCDataStream(object):
             raise SerializationError("attempt to read past end of buffer") from None
 
     def can_read_more(self) -> bool:
+        return self.bytes_left() > 0
+
+    def bytes_left(self):
         if not self.input:
-            return False
-        return self.read_cursor < len(self.input)
+            return 0
+        return len(self.input) - self.read_cursor
 
     def read_boolean(self): return self.read_bytes(1)[0] != chr(0)
     def read_char(self): return self._read_num('<b')
@@ -480,7 +488,10 @@ def deserialize(raw: str, force_full_parse=False, expect_trailing_data=False, ra
     else:
         vds.input = raw_bytes
     vds.read_cursor = start_position
+    return read_vds(vds, d, full_parse, alone_data=True, expect_trailing_data, expect_trailing_bytes)
 
+
+def read_vds(vds, d, full_parse, alone_data=False, expect_trailing_data=False, expect_trailing_bytes=False):
     # support DIP2 deserialization
     header = vds.read_uint32()
     tx_type = header >> 16  # DIP2 tx type
@@ -505,10 +516,10 @@ def deserialize(raw: str, force_full_parse=False, expect_trailing_data=False, ra
     else:
         d['extra_payload'] = b''
     # Auxpow
-    #if vds.can_read_more():
+    #if alone_data and vds.can_read_more():
     #    raise SerializationError('extra junk at the end')
     #return d
-    if vds.can_read_more() and not expect_trailing_data:
+    if alone_data and vds.can_read_more() and not expect_trailing_data:
         raise SerializationError('extra junk at the end')
     if not expect_trailing_data:
         return d
@@ -679,6 +690,9 @@ class Transaction:
             d, start_position = deserialize(self.raw, force_full_parse, expect_trailing_data=self.expect_trailing_data, raw_bytes=self.raw_bytes, expect_trailing_bytes=self.expect_trailing_bytes, copy_input=self.copy_input, start_position=self.start_position)
         else:
             d = deserialize(self.raw, force_full_parse, raw_bytes=self.raw_bytes, start_position=self.start_position)
+        return self.set_data_from_dict(d)
+    
+    def set_data_from_dict(self, d):
         self._inputs = d['inputs']
         self._outputs = [TxOutput(x['type'], x['address'], x['value']) for x in d['outputs']]
         self.locktime = d['lockTime']
@@ -704,6 +718,15 @@ class Transaction:
             return d, start_position
         else:
             return d
+
+    @classmethod
+    def read_vds(cls, vds, alone_data=False):
+        d = {}
+        d['partial'] = full_parse = False
+        d = read_vds(vds, d, full_parse, alone_data)
+        tx = cls(None)
+        tx.set_data_from_dict(d)
+        return tx
 
     @classmethod
     def from_io(klass, inputs, outputs, locktime=0, version=None,
