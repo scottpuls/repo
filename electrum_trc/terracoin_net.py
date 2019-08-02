@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Dash-Electrum - lightweight Dash client
+# Terracoin-Electrum - lightweight Terracoin client
 # Copyright (C) 2019 Dash Developers
 #
 # Permission is hereby granted, free of charge, to any person
@@ -40,8 +40,8 @@ from typing import Optional, Dict
 
 from . import constants
 from .blockchain import MissingHeader
-from .dash_peer import DashPeer
-from .dash_msg import SporkID
+from .terracoin_peer import TerracoinPeer
+from .terracoin_msg import SporkID
 from .i18n import _
 from .logging import Logger
 from .simple_config import SimpleConfig
@@ -77,23 +77,20 @@ def is_valid_portnum(portnum):
     return 0 < int(portnum) < 65536
 
 
-class DashSporks:
-    '''Dash Sporks manager'''
+class TerracoinSporks:
+    '''Terracoin Sporks manager'''
 
     LOGGING_SHORTCUT = 'D'
 
     SPORKS_DEFAULTS = {
-        SporkID.SPORK_2_INSTANTSEND_ENABLED.value: 0,               # ON
-        SporkID.SPORK_3_INSTANTSEND_BLOCK_FILTERING.value: 0,       # ON
-        SporkID.SPORK_5_INSTANTSEND_MAX_VALUE.value: 1000,          # 1000 Dash
-        SporkID.SPORK_6_NEW_SIGS.value: Y2099,                      # OFF
-        SporkID.SPORK_9_SUPERBLOCKS_ENABLED.value: Y2099,           # OFF
-        SporkID.SPORK_12_RECONSIDER_BLOCKS.value: 0,                # 0 Blocks
-        SporkID.SPORK_15_DETERMINISTIC_MNS_ENABLED.value: Y2099,    # OFF
-        SporkID.SPORK_16_INSTANTSEND_AUTOLOCKS.value: Y2099,        # OFF
-        SporkID.SPORK_17_QUORUM_DKG_ENABLED.value: Y2099,           # OFF
-        SporkID.SPORK_19_CHAINLOCKS_ENABLED.value: Y2099,           # OFF
-        SporkID.SPORK_20_INSTANTSEND_LLMQ_BASED.value: Y2099,       # OFF
+        SporkID.SPORK_1_INSTANTSEND_ENABLED.value: Y2099,           # OFF
+        SporkID.SPORK_2_INSTANTSEND_BLOCK_FILTERING.value: 0,       # ON
+        SporkID.SPORK_3_INSTANTSEND_MAX_VALUE.value: 20000,         # 20000 Terracoin
+        SporkID.SPORK_4_MASTERNODE_PAYMENT_ENFORCEMENT.value: Y2099,# OFF
+        SporkID.SPORK_5_SUPERBLOCKS_ENABLED.value: Y2099,           # OFF
+        SporkID.SPORK_6_RECONSIDER_BLOCKS.value: 0,                 # 0 Blocks
+        SporkID.SPORK_7_REQUIRE_SENTINEL_FLAG.value: Y2099,         # OFF
+        SporkID.SPORK_8_MASTERNODE_PAY_PROTO_MIN.value: 70206,      # First Masternode Protocol Version
     }
 
     def __init__(self):
@@ -141,7 +138,9 @@ class DashSporks:
         return value
 
     def is_new_sigs(self):
-        return self.is_spork_active(SporkID.SPORK_6_NEW_SIGS)
+        # SporkID.SPORK_6_NEW_SIGS not in Terracoin, default to no
+        #return self.is_spork_active(SporkID.SPORK_6_NEW_SIGS)
+        return False
 
     def as_dict(self):
         res = {}
@@ -156,9 +155,9 @@ class DashSporks:
         return res
 
 
-class DashNet(Logger):
-    '''The DashNet class manages a set of connections to remote peers
-    each connected peer is handled by an DashPeer() object.
+class TerracoinNet(Logger):
+    '''The TerracoinNet class manages a set of connections to remote peers
+    each connected peer is handled by an TerracoinPeer() object.
     '''
 
     LOGGING_SHORTCUT = 'D'
@@ -170,18 +169,16 @@ class DashNet(Logger):
         Logger.__init__(self)
 
         if constants.net.TESTNET:
-            self.default_port = 19999
-            self.start_str = b'\xCE\xE2\xCA\xFF'
-            self.spork_address = 'yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55'
-            self.dns_seeds = ['testnet-seed.dashdot.io',
-                              'test.dnsseed.masternode.io']
+            self.default_port = 18321
+            self.start_str = b'\x0B\x11\x09\x07'
+            self.spork_address = 'movuntE9Cn6zgxtzabQbgqDVQKUNPv49RJ' #02ba07bdd2ec80a1836102c4a496f6e6e09cb969aa69e98b727040b4d96a382972
+            elf.dns_seeds = ['testnetseed.terracoin.io']
         else:
-            self.default_port = 9999
-            self.start_str = b'\xBF\x0C\x6B\xBD'
-            self.spork_address = 'Xgtyuk76vhuFW2iT7UAiHgNdWXCf3J34wh'
-            self.dns_seeds = ['dnsseed.dash.org',
-                              'dnsseed.dashdot.io',
-                              'dnsseed.masternode.io']
+            self.default_port = 13333
+            self.start_str = b'\x42\xBA\xBE\x56'
+            self.spork_address = '13GHJVztHpyoaoPqakuXnmwjUvLYp469VN' #02f1b4c2d95dee0f02de365173ed859b8604f9ce3653ef1f9c7d4723a2b3458b30
+            self.dns_seeds = ['seed.terracoin.io',
+                              'dnsseed.southofheaven.ca']
         self.network = network
         self.proxy = None
         self.loop = network.asyncio_loop
@@ -189,7 +186,7 @@ class DashNet(Logger):
         self.config = network.config
 
         if config.path:
-            self.data_dir = os.path.join(config.path, 'dash_net')
+            self.data_dir = os.path.join(config.path, 'terracoin_net')
             make_dir(self.data_dir)
         else:
             self.data_dir = None
@@ -207,19 +204,19 @@ class DashNet(Logger):
         self.callbacks = defaultdict(list)  # note: needs self.callback_lock
 
         # set of peers we have an ongoing connection with
-        self.peers = {}  # type: Dict[str, DashPeer]
+        self.peers = {}  # type: Dict[str, TerracoinPeer]
         self.connecting = set()
         self.peers_queue = None
         self.recent_peers = self._read_recent_peers()
         self.banlist = self._read_banlist()
         self.found_peers = set(self.recent_peers)
 
-        self.is_cmd_dash_peers = not config.is_modifiable('dash_peers')
+        self.is_cmd_terracoin_peers = not config.is_modifiable('terracoin_peers')
         self.read_conf()
 
-        self._max_peers = self.config.get('dash_max_peers', MAX_PEERS_DEFAULT)
+        self._max_peers = self.config.get('terracoin_max_peers', MAX_PEERS_DEFAULT)
         # sporks manager
-        self.sporks = DashSporks()
+        self.sporks = TerracoinSporks()
 
         # Recent islocks and chainlocks data
         self.recent_islock_invs = deque([], 200)
@@ -237,23 +234,23 @@ class DashNet(Logger):
 
     def read_conf(self):
         config = self.config
-        self.run_dash_net = config.get('run_dash_net', True)
-        self.dash_peers = self.config.get('dash_peers', [])
-        if self.is_cmd_dash_peers:
+        self.run_terracoin_net = config.get('run_terracoin_net', True)
+        self.terracoin_peers = self.config.get('terracoin_peers', [])
+        if self.is_cmd_terracoin_peers:
             self.use_static_peers = True
         else:
-            self.use_static_peers = config.get('dash_use_static_peers', False)
+            self.use_static_peers = config.get('terracoin_use_static_peers', False)
         self.static_peers = []
         if self.use_static_peers:
-            for p in self.dash_peers:
+            for p in self.terracoin_peers:
                 if ':' not in p:
                     p = f'{p}:{self.default_port}'
                 self.static_peers.append(p)
 
-    def dash_peers_as_str(self):
-        return ', '.join(self.dash_peers)
+    def terracoin_peers_as_str(self):
+        return ', '.join(self.terracoin_peers)
 
-    def dash_peers_from_str(self, peers_str):
+    def terracoin_peers_from_str(self, peers_str):
         peers = list(filter(lambda x: x, re.split(r';|,| |\n', peers_str)))
         for p in peers:
             if ':' in p:
@@ -266,7 +263,7 @@ class DashNet(Logger):
         return peers
 
     @staticmethod
-    def get_instance() -> Optional['DashNet']:
+    def get_instance() -> Optional['TerracoinNet']:
         return INSTANCE
 
     def with_recent_peers_lock(func):
@@ -363,62 +360,62 @@ class DashNet(Logger):
             self.logger.info(f'failed to save banlist.gz: {repr(e)}')
 
     @with_banlist_lock
-    def _add_banned_peer(self, dash_peer):
-        peer = dash_peer.peer
+    def _add_banned_peer(self, terracoin_peer):
+        peer = terracoin_peer.peer
         self.banlist[peer] = {
             'at': time.time(),
-            'msg': dash_peer.ban_msg,
-            'till': dash_peer.ban_till,
-            'ua': dash_peer.version.user_agent.decode('utf-8'),
+            'msg': terracoin_peer.ban_msg,
+            'till': terracoin_peer.ban_till,
+            'ua': terracoin_peer.version.user_agent.decode('utf-8'),
         }
         self._save_banlist()
-        self.trigger_callback('dash-banlist-updated', 'added', peer)
+        self.trigger_callback('terracoin-banlist-updated', 'added', peer)
 
     @with_banlist_lock
     def _remove_banned_peer(self, peer):
         if peer in self.banlist:
             del self.banlist[peer]
             self._save_banlist()
-            self.trigger_callback('dash-banlist-updated', 'removed', peer)
+            self.trigger_callback('terracoin-banlist-updated', 'removed', peer)
 
     def status_icon(self):
-        if self.run_dash_net:
+        if self.run_terracoin_net:
             peers_cnt = len(self.peers)
             peers_percent = peers_cnt * 100 // MAX_PEERS_LIMIT
             if peers_percent == 0:
-                return 'dash_net_0.png'
+                return 'terracoin_net_0.png'
             elif peers_percent <= 25:
-                return 'dash_net_1.png'
+                return 'terracoin_net_1.png'
             elif peers_percent <= 50:
-                return 'dash_net_2.png'
+                return 'terracoin_net_2.png'
             elif peers_percent <= 75:
-                return 'dash_net_3.png'
+                return 'terracoin_net_3.png'
             else:
-                return 'dash_net_4.png'
+                return 'terracoin_net_4.png'
         else:
-            return 'dash_net_off.png'
+            return 'terracoin_net_off.png'
 
     @log_exceptions
     async def set_parameters(self):
         proxy = self.network.proxy
-        run_dash_net = self.config.get('run_dash_net', True)
-        if not self.is_cmd_dash_peers:
-            dash_peers = self.config.get('dash_peers', [])
-            use_static_peers = self.config.get('dash_use_static_peers', False)
+        run_terracoin_net = self.config.get('run_terracoin_net', True)
+        if not self.is_cmd_terracoin_peers:
+            terracoin_peers = self.config.get('terracoin_peers', [])
+            use_static_peers = self.config.get('terracoin_use_static_peers', False)
         else:
-            dash_peers = self.dash_peers
+            terracoin_peers = self.terracoin_peers
             use_static_peers = self.use_static_peers
         async with self.restart_lock:
             if (self.proxy != proxy
-                    or self.run_dash_net != run_dash_net
+                    or self.run_terracoin_net != run_terracoin_net
                     or self.use_static_peers != use_static_peers
-                    or self.dash_peers != dash_peers):
+                    or self.terracoin_peers != terracoin_peers):
                 await self._stop()
                 await self._start()
 
     async def _start(self):
         self.read_conf()
-        if not self.run_dash_net:
+        if not self.run_terracoin_net:
             return
 
         assert not self.main_taskgroup
@@ -427,7 +424,7 @@ class DashNet(Logger):
         assert not self.connecting and not self.peers_queue
         self.peers_queue = queue.Queue()
         self.proxy = self.network.proxy
-        self.logger.info('starting Dash network')
+        self.logger.info('starting Terracoin network')
         self.disconnected_static = {}
         async def main():
             try:
@@ -440,7 +437,7 @@ class DashNet(Logger):
                 raise e
 
         asyncio.run_coroutine_threadsafe(main(), self.loop)
-        self.trigger_callback('dash-net-updated', 'enabled')
+        self.trigger_callback('terracoin-net-updated', 'enabled')
 
     def start(self):
         asyncio.run_coroutine_threadsafe(self._start(), self.loop)
@@ -450,7 +447,7 @@ class DashNet(Logger):
         if not self.main_taskgroup:
             return
 
-        self.logger.info('stopping Dash network')
+        self.logger.info('stopping Terracoin network')
         try:
             await asyncio.wait_for(self.main_taskgroup.cancel_remaining(),
                                    timeout=2)
@@ -458,11 +455,11 @@ class DashNet(Logger):
             self.logger.info(f'exc during main_taskgroup cancellation: '
                              f'{repr(e)}')
         self.main_taskgroup = None  # type: TaskGroup
-        self.peeers = {}  # type: Dict[str, DashPeer]
+        self.peeers = {}  # type: Dict[str, TerracoinPeer]
         self.connecting.clear()
         self.peers_queue = None
         if not full_shutdown:
-            self.trigger_callback('dash-net-updated', 'disabled')
+            self.trigger_callback('terracoin-net-updated', 'disabled')
 
     def stop(self):
         assert self._loop_thread != threading.current_thread(), NET_THREAD_MSG
@@ -490,7 +487,7 @@ class DashNet(Logger):
         cnt = MIN_PEERS_LIMIT if cnt < MIN_PEERS_LIMIT else cnt
         cnt = MAX_PEERS_LIMIT if cnt > MAX_PEERS_LIMIT else cnt
         self._max_peers = cnt
-        self.config.set_key('dash_max_peers', cnt, True)
+        self.config.set_key('terracoin_max_peers', cnt, True)
 
     async def find_peers(self):
         peers_set = set(self.peers.keys())
@@ -576,7 +573,7 @@ class DashNet(Logger):
             if read_time < new_read_time or write_time < new_write_time:
                 read_time = new_read_time
                 write_time = new_write_time
-                self.trigger_callback('dash-net-activity')
+                self.trigger_callback('terracoin-net-activity')
             if set_spork_time < new_set_spork_time:
                 set_spork_time = new_set_spork_time
                 self.trigger_callback('sporks-activity')
@@ -609,40 +606,40 @@ class DashNet(Logger):
             self.connecting.add(peer)
             self.peers_queue.put(peer)
 
-    async def _close_peer(self, dash_peer):
-        if dash_peer:
+    async def _close_peer(self, terracoin_peer):
+        if terracoin_peer:
             with self.peers_lock:
-                if self.peers.get(dash_peer.peer) == dash_peer:
-                    self.peers.pop(dash_peer.peer)
-            await dash_peer.close()
+                if self.peers.get(terracoin_peer.peer) == terracoin_peer:
+                    self.peers.pop(terracoin_peer.peer)
+            await terracoin_peer.close()
 
-    async def connection_down(self, dash_peer, msg=None):
+    async def connection_down(self, terracoin_peer, msg=None):
         if msg is not None:
-            await dash_peer.ban(msg)
-        peer = dash_peer.peer
-        await self._close_peer(dash_peer)
+            await terracoin_peer.ban(msg)
+        peer = terracoin_peer.peer
+        await self._close_peer(terracoin_peer)
         if self.use_static_peers and peer in self.static_peers:
             self.disconnected_static[peer] = time.time()
-        elif dash_peer.ban_msg:
-            self._add_banned_peer(dash_peer)
-        self.trigger_callback('dash-peers-updated', 'removed', peer)
+        elif terracoin_peer.ban_msg:
+            self._add_banned_peer(terracoin_peer)
+        self.trigger_callback('terracoin-peers-updated', 'removed', peer)
 
     @ignore_exceptions  # do not kill main_taskgroup
     @log_exceptions
     async def _run_new_peer(self, peer):
-        dash_peer = DashPeer(self, peer, self.proxy)
+        terracoin_peer = TerracoinPeer(self, peer, self.proxy)
         # note: using longer timeouts here as DNS can sometimes be slow!
         timeout = self.network.get_network_timeout_seconds()
         try:
-            await asyncio.wait_for(dash_peer.ready, timeout)
+            await asyncio.wait_for(terracoin_peer.ready, timeout)
         except BaseException as e:
             self.logger.info(f'could not connect peer {peer} -- {repr(e)}')
-            await dash_peer.close()
+            await terracoin_peer.close()
             return
         else:
             with self.peers_lock:
                 assert peer not in self.peers
-                self.peers[peer] = dash_peer
+                self.peers[peer] = terracoin_peer
         finally:
             try:
                 self.connecting.remove(peer)
@@ -650,7 +647,7 @@ class DashNet(Logger):
                 pass
 
         self._add_recent_peer(peer)
-        self.trigger_callback('dash-peers-updated', 'added', peer)
+        self.trigger_callback('terracoin-peers-updated', 'added', peer)
 
     async def getmnlistd(self, get_mns=False):
         mn_list = self.network.mn_list

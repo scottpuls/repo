@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Dash-Electrum - lightweight Dash client
+# Terracoin-Electrum - lightweight Terracoin client
 # Copyright (C) 2019 Dash Developers
 #
 # Permission is hereby granted, free of charge, to any person
@@ -35,9 +35,9 @@ from typing import Optional, Tuple
 
 from .bitcoin import public_key_to_p2pkh
 from .crypto import sha256d
-from .dash_msg import (SporkID, LLMQType, DashType, DashCmd, DashVersionMsg,
-                       DashPingMsg, DashPongMsg, DashGetDataMsg,
-                       DashGetMNListDMsg)
+from .terracoin_msg import (SporkID, LLMQType, TerracoinType, TerracoinCmd, TerracoinVersionMsg,
+                       TerracoinPingMsg, TerracoinPongMsg, TerracoinGetDataMsg,
+                       TerracoinGetMNListDMsg)
 from .ecc import ECPubkey
 from .interface import GracefulDisconnect
 from .logging import Logger
@@ -46,7 +46,7 @@ from .version import ELECTRUM_VERSION
 
 
 EMPTY_PAYLOAD_CHECKSUM = b'\x5D\xF6\xE0\xE2'
-DASH_PROTO_VERSION = 70214
+TERRACOIN_PROTO_VERSION = 70208
 LOCAL_IP_ADDR = ipaddress.ip_address('127.0.0.1')
 PAYLOAD_LIMIT = 32*2**20  # 32MiB
 READ_LIMIT = 64*2**10     # 64KiB
@@ -66,21 +66,21 @@ def deserialize_peer(peer_str: str) -> Tuple[str, str]:
     return host, int_port
 
 
-class DashPeer(Logger):
+class TerracoinPeer(Logger):
 
     LOGGING_SHORTCUT = 'P'
 
-    def __init__(self, dash_net, peer: str, proxy: Optional[dict]):
-        self.default_port = dash_net.default_port
-        self.start_str = dash_net.start_str
+    def __init__(self, terracoin_net, peer: str, proxy: Optional[dict]):
+        self.default_port = terracoin_net.default_port
+        self.start_str = terracoin_net.start_str
 
         self.ready = asyncio.Future()
         self.peer = peer
         self.host, self.port = deserialize_peer(self.peer)
         Logger.__init__(self)
-        assert dash_net.network.config.path
-        self.dash_net = dash_net
-        self.loop = dash_net.loop
+        assert terracoin_net.network.config.path
+        self.terracoin_net = terracoin_net
+        self.loop = terracoin_net.loop
         self._set_proxy(proxy)
 
         self.sw = None  # StreamWriter
@@ -113,7 +113,7 @@ class DashPeer(Logger):
         self.ban_msg = None
         self.ban_till = None
 
-        main_group_coro = self.dash_net.main_taskgroup.spawn(self.run())
+        main_group_coro = self.terracoin_net.main_taskgroup.spawn(self.run())
         asyncio.run_coroutine_threadsafe(main_group_coro, self.loop)
         self.group = SilentTaskGroup()
 
@@ -130,13 +130,13 @@ class DashPeer(Logger):
             self.socks_url = None
 
     def handle_disconnect(func):
-        async def wrapper_func(self: 'DashPeer', *args, **kwargs):
+        async def wrapper_func(self: 'TerracoinPeer', *args, **kwargs):
             try:
                 return await func(self, *args, **kwargs)
             except GracefulDisconnect as e:
                 self.logger.log(e.log_level, f'disconnecting due to {repr(e)}')
             finally:
-                await self.dash_net.connection_down(self)
+                await self.terracoin_net.connection_down(self)
                 # if was not 'ready' yet, schedule waiting coroutines:
                 self.ready.cancel()
         return wrapper_func
@@ -148,7 +148,7 @@ class DashPeer(Logger):
         try:
             self.ip_addr = ipaddress.ip_address(self.host)
         except Exception:
-            addr = await self.dash_net.resolve_dns_over_https(self.host)
+            addr = await self.terracoin_net.resolve_dns_over_https(self.host)
             if addr:
                 self.ip_addr = ipaddress.ip_address(addr[0])
             else:
@@ -183,7 +183,7 @@ class DashPeer(Logger):
             version_received = False
             await self.send_version()
             for res in [await self.read_next_msg() for i in range(2)]:
-                if self.debug or self.dash_net.debug:
+                if self.debug or self.terracoin_net.debug:
                     self.logger.info(f'<-- {res}')
                 if res.cmd == 'version':
                     self.version = res.payload
@@ -215,11 +215,11 @@ class DashPeer(Logger):
         while True:
             res = await self.read_next_msg()
             if res:
-                dash_net = self.dash_net
-                if self.debug or dash_net.debug:
+                terracoin_net = self.terracoin_net
+                if self.debug or terracoin_net.debug:
                     self.logger.info(f'<-- {res}')
                 if res.cmd == 'ping':
-                    msg = DashPongMsg(res.payload.nonce)
+                    msg = TerracoinPongMsg(res.payload.nonce)
                     await self.send_msg('pong', msg.serialize())
                 elif res.cmd == 'pong':
                     now = time.time()
@@ -228,7 +228,7 @@ class DashPeer(Logger):
                         self.ping_nonce = None
                         self.ping_start = None
                     else:
-                        self.logger.info(f'pong with unknonw nonce')
+                        self.logger.info(f'pong with unknown nonce')
                 elif res.cmd == 'spork':
                     spork_msg = res.payload
                     spork_id = spork_msg.nSporkID
@@ -243,25 +243,25 @@ class DashPeer(Logger):
                         ban_msg = 'verify_spork failed'
                         await self.ban(ban_msg)
                         raise GracefulDisconnect(ban_msg)
-                    sporks = dash_net.sporks
+                    sporks = terracoin_net.sporks
                     sporks.set_spork(spork_id, spork_msg.nValue, self.peer)
-                    dash_net.set_spork_time = time.time()
+                    terracoin_net.set_spork_time = time.time()
                 elif res.cmd == 'inv':
                     out_inventory = []
                     for di in res.payload.inventory:
                         inv_hash = di.hash
-                        if di.type == DashType.MSG_ISLOCK:
-                            recent_invs = dash_net.recent_islock_invs
+                        if di.type == TerracoinType.MSG_ISLOCK:
+                            recent_invs = terracoin_net.recent_islock_invs
                             if inv_hash not in recent_invs:
                                 recent_invs.append(inv_hash)
                                 out_inventory.append(di)
                     if out_inventory:
-                        msg = DashGetDataMsg(out_inventory)
+                        msg = TerracoinGetDataMsg(out_inventory)
                         await self.send_msg('getdata', msg.serialize())
                 elif res.cmd == 'addr':
                     addresses = [f'{a.ip}:{a.port}'
                                  for a in res.payload.addresses]
-                    found_peers = self.dash_net.found_peers
+                    found_peers = self.terracoin_net.found_peers
                     found_peers = found_peers.union(addresses)
                 elif res.cmd == 'mnlistdiff':
                     try:
@@ -271,28 +271,28 @@ class DashPeer(Logger):
                 elif res.cmd == 'islock':
                     islock = res.payload
                     request_id = islock.calc_request_id()
-                    mn_list = dash_net.network.mn_list
+                    mn_list = terracoin_net.network.mn_list
                     quorum = mn_list.calc_responsible_quorum(IS_LLMQ_TYPE,
                                                              request_id)
                     if quorum is None:
                         self.logger.info('no fourm found to verify islock')
                         continue
-                    loop = dash_net.loop
+                    loop = terracoin_net.loop
                     v_ok = await loop.run_in_executor(None,
-                                                      dash_net.verify_islock,
+                                                      terracoin_net.verify_islock,
                                                       islock, quorum,
                                                       request_id)
                     txid = bh2u(islock.txid[::-1])
                     if v_ok:
                         self.logger.info(f'verify islock ok: {txid}')
-                        dash_net.recent_islocks.append(txid)
-                        dash_net.trigger_callback('dash-islock', txid)
+                        terracoin_net.recent_islocks.append(txid)
+                        terracoin_net.trigger_callback('terracoin-islock', txid)
                     else:
                         self.logger.info(f'verify islock failed: {txid}')
             await asyncio.sleep(0.1)
 
     async def monitor_connection(self):
-        net_timeout = self.dash_net.network.get_network_timeout_seconds()
+        net_timeout = self.terracoin_net.network.get_network_timeout_seconds()
         while True:
             await asyncio.sleep(1)
             if self._is_closed:
@@ -312,7 +312,7 @@ class DashPeer(Logger):
             while self.is_active():
                 await asyncio.sleep(0.5)
             self.ping_nonce = random.getrandbits(64)
-            msg = DashPingMsg(self.ping_nonce)
+            msg = TerracoinPingMsg(self.ping_nonce)
             msg_serialized = msg.serialize()
             self.ping_start = time.time()
             await self.send_msg('ping', msg_serialized)
@@ -333,10 +333,10 @@ class DashPeer(Logger):
         self.logger.info(f'banned{till}: {ban_msg}')
 
     async def send_msg(self, cmd: str, payload: bytes=b''):
-        dash_net = self.dash_net
-        if self.debug or dash_net.debug:
-            dash_cmd = DashCmd(cmd, payload)
-            self.logger.info(f'--> {dash_cmd}')
+        terracoin_net = self.terracoin_net
+        if self.debug or terracoin_net.debug:
+            terracoin_cmd = TerracoinCmd(cmd, payload)
+            self.logger.info(f'--> {terracoin_cmd}')
         cmd_len = len(cmd)
         if cmd_len > 12:
             raise Exception('command str to long')
@@ -353,12 +353,12 @@ class DashPeer(Logger):
             msg = self.start_str + cmd + payload_size + EMPTY_PAYLOAD_CHECKSUM
         self.sw.write(msg)
         self.write_bytes += len(msg)
-        dash_net.write_bytes += len(msg)
-        self.write_time = dash_net.write_time = time.time()
+        terracoin_net.write_bytes += len(msg)
+        self.write_time = terracoin_net.write_time = time.time()
         await self.sw.drain()
 
     async def send_version(self):
-        version = DASH_PROTO_VERSION
+        version = TERRACOIN_PROTO_VERSION
         services = 0
         timestamp = int(time.time())
         recv_services = 1
@@ -368,10 +368,10 @@ class DashPeer(Logger):
         trans_ip = LOCAL_IP_ADDR
         trans_port = self.default_port
         nonce = random.getrandbits(64)
-        user_agent = '/Dash Electrum:%s/' % ELECTRUM_VERSION
-        start_height = self.dash_net.network.get_local_height()
+        user_agent = '/Terracoin Electrum:%s/' % ELECTRUM_VERSION
+        start_height = self.terracoin_net.network.get_local_height()
         relay = 0
-        msg = DashVersionMsg(version, services, timestamp,
+        msg = TerracoinVersionMsg(version, services, timestamp,
                              recv_services, recv_ip, recv_port,
                              trans_services, trans_ip, trans_port,
                              nonce, user_agent, start_height, relay, None)
@@ -380,23 +380,23 @@ class DashPeer(Logger):
     async def read_next_msg(self):
         start_str = None
         start_bytes_read = 0
-        dash_net = self.dash_net
+        terracoin_net = self.terracoin_net
         while not start_str:
             try:
                 start_str = await self.sr.readuntil(self.start_str)
-                self.read_time = dash_net.read_time = time.time()
+                self.read_time = terracoin_net.read_time = time.time()
                 len_start_str = len(start_str)
                 self.read_bytes += len_start_str
-                dash_net.read_bytes += len_start_str
+                terracoin_net.read_bytes += len_start_str
                 if len_start_str > 4:
                     self.logger.info(f'extra data before start'
                                      f' str: {len_start_str}')
             except asyncio.LimitOverrunError:
                 self.logger.info('start str not found, read ahead')
                 await self.sr.readexactly(READ_LIMIT)
-                self.read_time = dash_net.read_time = time.time()
+                self.read_time = terracoin_net.read_time = time.time()
                 self.read_bytes += READ_LIMIT
-                dash_net.read_bytes += READ_LIMIT
+                terracoin_net.read_bytes += READ_LIMIT
                 start_bytes_read += READ_LIMIT
                 if start_bytes_read > PAYLOAD_LIMIT:
                     ban_msg = (f'start str not found in '
@@ -418,26 +418,26 @@ class DashPeer(Logger):
                 await self.ban(ban_msg)
                 raise GracefulDisconnect(ban_msg)
             checksum = await self.sr.readexactly(4)
-            self.read_time = dash_net.read_time = time.time()
+            self.read_time = terracoin_net.read_time = time.time()
             self.read_bytes += 20
-            dash_net.read_bytes += 20
+            terracoin_net.read_bytes += 20
             if payload_size == 0:
                 if checksum != EMPTY_PAYLOAD_CHECKSUM:
                     self.logger.info(f'error reading msg {cmd}, '
                                      f'checksum mismatch')
                     return res
-                return DashCmd(cmd)
+                return TerracoinCmd(cmd)
 
             payload = await self.sr.readexactly(payload_size)
-            self.read_time = dash_net.read_time = time.time()
+            self.read_time = terracoin_net.read_time = time.time()
             self.read_bytes += payload_size
-            dash_net.read_bytes += payload_size
+            terracoin_net.read_bytes += payload_size
             calc_checksum = sha256d(payload)[:4]
             if checksum != calc_checksum:
                 self.logger.info(f'error reading msg {cmd}, '
                                  f'checksum mismatch')
                 return res
-            res = DashCmd(cmd, payload)
+            res = TerracoinCmd(cmd, payload)
         except asyncio.IncompleteReadError:
             raise GracefulDisconnect('error reading msg, EOF reached')
         except Exception as e:
@@ -449,7 +449,7 @@ class DashPeer(Logger):
             self.logger.info('Spork signed to far in the future')
             return False
 
-        new_sigs = self.dash_net.sporks.is_new_sigs()
+        new_sigs = self.terracoin_net.sporks.is_new_sigs()
 
         try:
             if self.verify_spork_sig(spork_msg, new_sigs):
@@ -473,15 +473,15 @@ class DashPeer(Logger):
         public_key.verify_message_hash(sig[1:], msg_hash)
         pubkey_bytes = public_key.get_public_key_bytes(compressed)
         spork_address = public_key_to_p2pkh(pubkey_bytes)
-        if self.dash_net.spork_address == spork_address:
+        if self.terracoin_net.spork_address == spork_address:
             return True
         else:
             return False
 
     async def getmnlistd(self, base_height, height):
-        base_block_hash = await self.dash_net.get_hash(base_height)
-        block_hash = await self.dash_net.get_hash(height)
-        msg = DashGetMNListDMsg(base_block_hash, block_hash)
+        base_block_hash = await self.terracoin_net.get_hash(base_height)
+        block_hash = await self.terracoin_net.get_hash(height)
+        msg = TerracoinGetMNListDMsg(base_block_hash, block_hash)
         if not self.mnlistdiffs.empty():
             self.logger.info('unasked mnlistdiff msg')
             self.mnlistdiffs.get_nowait()

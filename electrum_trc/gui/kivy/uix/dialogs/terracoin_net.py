@@ -3,16 +3,16 @@ from kivy.properties import (NumericProperty, StringProperty, BooleanProperty,
                              ObjectProperty, ListProperty)
 from kivy.lang import Builder
 
-from electrum_dash.gui.kivy.i18n import _
+from electrum_trc.gui.kivy.i18n import _
 
 
 Builder.load_string('''
-#:import _ electrum_dash.gui.kivy.i18n._
-#:import MIN_PEERS_LIMIT electrum_dash.dash_net.MIN_PEERS_LIMIT
-#:import MAX_PEERS_LIMIT electrum_dash.dash_net.MAX_PEERS_LIMIT
+#:import _ electrum_trc.gui.kivy.i18n._
+#:import MIN_PEERS_LIMIT electrum_trc.terracoin_net.MIN_PEERS_LIMIT
+#:import MAX_PEERS_LIMIT electrum_trc.terracoin_net.MAX_PEERS_LIMIT
 
 
-<DashNetStatItem@SettingsItem>
+<TerracoinNetStatItem@SettingsItem>
     total: 0
     received: 0
     sent: 0
@@ -20,7 +20,7 @@ Builder.load_string('''
     _received: _('Received') + ': %s KiB' % self.received
     _sent: _('Sent') + ': %s KiB' % self.sent
     title: ', '.join([self._total, self._received, self._sent])
-    description: _('Data flow over Dash network')
+    description: _('Data flow over Terracoin network')
     action: lambda x: None
 
 
@@ -43,7 +43,7 @@ Builder.load_string('''
     halign: 'left'
 
 
-<DashPeerCard@BoxLayout>
+<TerracoinPeerCard@BoxLayout>
     peer: ''
     ua: ''
     is_title: False
@@ -165,7 +165,7 @@ Builder.load_string('''
 
 
 <SporksPopup@Popup>
-    title: _('Dash Sporks Values')
+    title: _('Terracoin Sporks Values')
     vbox: vbox
     BoxLayout:
         orientation: 'vertical'
@@ -215,7 +215,7 @@ Builder.load_string('''
 
 
 <BanlistPopup@Popup>
-    title: _('Banned Dash Peers')
+    title: _('Banned Terracoin Peers')
     vbox: vbox
     BoxLayout:
         orientation: 'vertical'
@@ -232,8 +232,8 @@ Builder.load_string('''
             on_release: root.dismiss()
 
 
-<DashNetDialog@Popup>
-    title: _('Dash Network')
+<TerracoinNetDialog@Popup>
+    title: _('Terracoin Network')
     BoxLayout:
         orientation: 'vertical'
         ScrollView:
@@ -244,7 +244,7 @@ Builder.load_string('''
                 height: self.minimum_height
                 padding: '10dp'
                 CardSeparator
-                DashNetStatItem
+                TerracoinNetStatItem
                     total: root.total
                     received: root.received
                     sent: root.sent
@@ -254,19 +254,19 @@ Builder.load_string('''
                     local_height: root.local_height
                 CardSeparator
                 SettingsItem:
-                    value: ': ON' if root.run_dash_net else ': OFF'
-                    title: _('Enable Dash Network') + self.value
-                    description: _('Enable or Disable Dash network')
-                    action: root.toggle_dash_net
+                    value: ': ON' if root.run_terracoin_net else ': OFF'
+                    title: _('Enable Terracoin Network') + self.value
+                    description: _('Enable or Disable Terracoin network')
+                    action: root.toggle_terracoin_net
                 CardSeparator
                 SettingsItem:
                     title: _('Connected Peers') + ': %s' % len(root.peers)
-                    description: _('Number of currently connected Dash peers')
+                    description: _('Number of currently connected Terracoin peers')
                     action: root.show_peers
                 CardSeparator
                 SettingsItem:
                     title: _('Max Peers') + ': %s' % root.max_peers
-                    description: _('Maximally allowed Dash peers count')
+                    description: _('Maximally allowed Terracoin peers count')
                     action: root.change_max_peers
                 CardSeparator
                 SettingsItem:
@@ -282,17 +282,17 @@ Builder.load_string('''
                 CardSeparator
                 SettingsItem:
                     title: _('Sporks') + ': %s' % len(root.sporks)
-                    description: _('Dash Sporks Values')
+                    description: _('Terracoin Sporks Values')
                     action: root.show_sporks
                 CardSeparator
                 SettingsItem:
                     title: _('Banlist') + ': %s' % len(root.banlist)
-                    description: _('Banned Dash Peers')
+                    description: _('Banned Terracoin Peers')
                     action: root.show_banlist
 ''')
 
 
-class DashPeerCard(Factory.BoxLayout):
+class TerracoinPeerCard(Factory.BoxLayout):
 
     peer = StringProperty()
     us = StringProperty()
@@ -320,11 +320,11 @@ class ConnectedPeersPopup(Factory.Popup):
 
     def update(self, *args, **kwargs):
         self.vbox.clear_widgets()
-        self.vbox.add_widget(DashPeerCard(_('Peer'),
+        self.vbox.add_widget(TerracoinPeerCard(_('Peer'),
                                           _('User Agent'),
                                           is_title=True))
         for peer, ua in self.dn_dlg.peers:
-            self.vbox.add_widget(DashPeerCard(peer, ua))
+            self.vbox.add_widget(TerracoinPeerCard(peer, ua))
 
     def on_peers(self, *args):
         self.update()
@@ -340,12 +340,12 @@ class MaxPeersPopup(Factory.Popup):
     def __init__(self, dn_dlg):
         Factory.Popup.__init__(self)
         self.dn_dlg = dn_dlg
-        self.slider.value = dn_dlg.dash_net.max_peers
+        self.slider.value = dn_dlg.terracoin_net.max_peers
 
     def dismiss(self, value=None):
         super(MaxPeersPopup, self).dismiss()
         if value is not None:
-            self.dn_dlg.dash_net.max_peers = value
+            self.dn_dlg.terracoin_net.max_peers = value
             self.dn_dlg.max_peers = value
 
 
@@ -357,23 +357,23 @@ class StaticPeersPopup(Factory.Popup):
     def __init__(self, dn_dlg):
         Factory.Popup.__init__(self)
         self.dn_dlg = dn_dlg
-        self.edit.text = dn_dlg.dash_net.dash_peers_as_str()
+        self.edit.text = dn_dlg.terracoin_net.terracoin_peers_as_str()
 
-    def dismiss(self, dash_peers=None):
-        if dash_peers is None:
+    def dismiss(self, terracoin_peers=None):
+        if terracoin_peers is None:
             super(StaticPeersPopup, self).dismiss()
             return
 
         net = self.dn_dlg.net
-        dash_net = net.dash_net
-        res = dash_net.dash_peers_from_str(dash_peers)
+        terracoin_net = net.terracoin_net
+        res = terracoin_net.terracoin_peers_from_str(terracoin_peers)
         if type(res) == str:
             self.err_label.text = f'Error: {res}'
         else:
             super(StaticPeersPopup, self).dismiss()
-            self.dn_dlg.config.set_key('dash_peers', res, True)
-            self.dn_dlg.static_peers = dash_net.dash_peers_as_str()
-            net.run_from_another_thread(dash_net.set_parameters())
+            self.dn_dlg.config.set_key('terracoin_peers', res, True)
+            self.dn_dlg.static_peers = terracoin_net.terracoin_peers_as_str()
+            net.run_from_another_thread(terracoin_net.set_parameters())
 
 
 class SporkCard(Factory.BoxLayout):
@@ -436,8 +436,8 @@ class BanlistCard(Factory.BoxLayout):
     def on_remove(self, peer):
         if not peer:
             return
-        dash_net = self.dn_dlg.dash_net
-        dash_net._remove_banned_peer(peer)
+        terracoin_net = self.dn_dlg.terracoin_net
+        terracoin_net._remove_banned_peer(peer)
 
 
 class BanlistPopup(Factory.Popup):
@@ -467,12 +467,12 @@ class BanlistPopup(Factory.Popup):
         self.update()
 
 
-class DashNetDialog(Factory.Popup):
+class TerracoinNetDialog(Factory.Popup):
 
     total = NumericProperty()
     received = NumericProperty()
     sent = NumericProperty()
-    run_dash_net = BooleanProperty()
+    run_terracoin_net = BooleanProperty()
     peers = ListProperty()
     max_peers = NumericProperty()
     use_static_peers = BooleanProperty()
@@ -487,56 +487,56 @@ class DashNetDialog(Factory.Popup):
         self.config = self.app.electrum_config
         self.net = app.network
         self.mn_list = self.net.mn_list
-        self.dash_net = self.net.dash_net
+        self.terracoin_net = self.net.terracoin_net
         Factory.Popup.__init__(self)
         layout = self.ids.scrollviewlayout
         layout.bind(minimum_height=layout.setter('height'))
 
     def update(self):
-        self.on_dash_net_activity()
+        self.on_terracoin_net_activity()
         self.on_sporks_activity()
-        self.on_dash_peers_updated()
-        self.on_dash_banlist_updated()
+        self.on_terracoin_peers_updated()
+        self.on_terracoin_banlist_updated()
         self.on_mn_list_diff_updated()
         self.on_network_updated()
-        self.run_dash_net = self.config.get('run_dash_net', True)
-        self.max_peers = self.dash_net.max_peers
-        self.use_static_peers = self.config.get('dash_use_static_peers', True)
-        self.static_peers = self.dash_net.dash_peers_as_str()
+        self.run_terracoin_net = self.config.get('run_terracoin_net', True)
+        self.max_peers = self.terracoin_net.max_peers
+        self.use_static_peers = self.config.get('terracoin_use_static_peers', True)
+        self.static_peers = self.terracoin_net.terracoin_peers_as_str()
 
     def open(self, *args, **kwargs):
-        super(DashNetDialog, self).open(*args, **kwargs)
-        self.dash_net.register_callback(self.on_dash_net_activity,
-                                        ['dash-net-activity'])
-        self.dash_net.register_callback(self.on_sporks_activity,
+        super(TerracoinNetDialog, self).open(*args, **kwargs)
+        self.terracoin_net.register_callback(self.on_terracoin_net_activity,
+                                        ['terracoin-net-activity'])
+        self.terracoin_net.register_callback(self.on_sporks_activity,
                                         ['sporks-activity'])
-        self.dash_net.register_callback(self.on_dash_peers_updated,
-                                        ['dash-peers-updated'])
-        self.dash_net.register_callback(self.on_dash_banlist_updated,
-                                        ['dash-banlist-updated'])
+        self.terracoin_net.register_callback(self.on_terracoin_peers_updated,
+                                        ['terracoin-peers-updated'])
+        self.terracoin_net.register_callback(self.on_terracoin_banlist_updated,
+                                        ['terracoin-banlist-updated'])
         self.mn_list.register_callback(self.on_mn_list_diff_updated,
                                        ['mn-list-diff-updated'])
         self.net.register_callback(self.on_network_updated,
                                    ['network_updated'])
 
     def dismiss(self, *args, **kwargs):
-        super(DashNetDialog, self).dismiss(*args, **kwargs)
-        self.dash_net.unregister_callback(self.on_dash_net_activity)
-        self.dash_net.unregister_callback(self.on_sporks_activity)
-        self.dash_net.unregister_callback(self.on_dash_peers_updated)
-        self.dash_net.unregister_callback(self.on_dash_banlist_updated)
+        super(TerracoinNetDialog, self).dismiss(*args, **kwargs)
+        self.terracoin_net.unregister_callback(self.on_terracoin_net_activity)
+        self.terracoin_net.unregister_callback(self.on_sporks_activity)
+        self.terracoin_net.unregister_callback(self.on_terracoin_peers_updated)
+        self.terracoin_net.unregister_callback(self.on_terracoin_banlist_updated)
         self.mn_list.unregister_callback(self.on_mn_list_diff_updated)
         self.net.unregister_callback(self.on_network_updated)
 
-    def on_dash_net_activity(self, *args, **kwargs):
-        read_bytes = self.dash_net.read_bytes
-        write_bytes = self.dash_net.write_bytes
+    def on_terracoin_net_activity(self, *args, **kwargs):
+        read_bytes = self.terracoin_net.read_bytes
+        write_bytes = self.terracoin_net.write_bytes
         self.total = round((write_bytes + read_bytes)/1024, 1)
         self.received = round(read_bytes/1024, 1)
         self.sent = round(write_bytes/1024, 1)
 
     def on_sporks_activity(self, *args, **kwargs):
-        sporks_dict = self.dash_net.sporks.as_dict()
+        sporks_dict = self.terracoin_net.sporks.as_dict()
         self.sporks = []
         for k in sorted(list(sporks_dict.keys())):
             name = sporks_dict[k]['name']
@@ -548,14 +548,14 @@ class DashNetDialog(Factory.Popup):
             spork_item = [name, active, value]
             self.sporks.append(spork_item)
 
-    def on_dash_peers_updated(self, *args, **kwargs):
+    def on_terracoin_peers_updated(self, *args, **kwargs):
         self.peers = []
-        for peer, dash_peer in self.dash_net.peers.items():
-            ua = dash_peer.version.user_agent.decode('utf-8')
+        for peer, terracoin_peer in self.terracoin_net.peers.items():
+            ua = terracoin_peer.version.user_agent.decode('utf-8')
             self.peers.append((peer, ua))
 
-    def on_dash_banlist_updated(self, *args, **kwargs):
-        banlist = self.dash_net.banlist
+    def on_terracoin_banlist_updated(self, *args, **kwargs):
+        banlist = self.terracoin_net.banlist
         self.banlist = []
         for peer, banned in sorted(list(banlist.items())):
             self.banlist.append((peer, banned['ua']))
@@ -566,10 +566,10 @@ class DashNetDialog(Factory.Popup):
     def on_network_updated(self, *args, **kwargs):
         self.local_height = self.net.get_local_height()
 
-    def toggle_dash_net(self, *args):
-        self.run_dash_net = not self.config.get('run_dash_net', True)
-        self.config.set_key('run_dash_net', self.run_dash_net, True)
-        self.net.run_from_another_thread(self.net.dash_net.set_parameters())
+    def toggle_terracoin_net(self, *args):
+        self.run_terracoin_net = not self.config.get('run_terracoin_net', True)
+        self.config.set_key('run_terracoin_net', self.run_terracoin_net, True)
+        self.net.run_from_another_thread(self.net.terracoin_net.set_parameters())
 
     def show_peers(self, *args):
         ConnectedPeersPopup(self).open()
@@ -578,11 +578,11 @@ class DashNetDialog(Factory.Popup):
         MaxPeersPopup(self).open()
 
     def toggle_use_static_peers(self, *args):
-        use_static_peers = not self.config.get('dash_use_static_peers', True)
+        use_static_peers = not self.config.get('terracoin_use_static_peers', True)
         self.use_static_peers = use_static_peers
-        self.config.set_key('dash_use_static_peers', use_static_peers, True)
+        self.config.set_key('terracoin_use_static_peers', use_static_peers, True)
         net = self.net
-        net.run_from_another_thread(net.dash_net.set_parameters())
+        net.run_from_another_thread(net.terracoin_net.set_parameters())
 
     def change_static_peers(self, *args):
         StaticPeersPopup(self).open()

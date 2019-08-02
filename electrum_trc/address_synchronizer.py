@@ -156,13 +156,13 @@ class AddressSynchronizer(Logger):
             self.verifier = SPV(self.network, self)
             self.network.register_callback(self.on_blockchain_updated, ['blockchain_updated'])
             self.protx_manager.on_network_start(self.network)
-            dash_net = self.network.dash_net
-            dash_net.register_callback(self.on_dash_islock, ['dash-islock'])
+            terracoin_net = self.network.terracoin_net
+            terracoin_net.register_callback(self.on_terracoin_islock, ['terracoin-islock'])
 
     def on_blockchain_updated(self, event, *args):
         self._get_addr_balance_cache = {}  # invalidate cache
 
-    def on_dash_islock(self, event, txid):
+    def on_terracoin_islock(self, event, txid):
         if txid in self.db.islocks:
             self.logger.info(f'islock for {txid} already in wallet islocks')
         elif txid in self.unverified_tx:
@@ -176,8 +176,8 @@ class AddressSynchronizer(Logger):
         if txid in self.db.islocks:
             self.logger.info(f'islock for {txid} already in wallet islocks')
         else:
-            dash_net = self.network.dash_net
-            if txid in dash_net.recent_islocks:
+            terracoin_net = self.network.terracoin_net
+            if txid in terracoin_net.recent_islocks:
                 self.logger.info(f'found islock pair for: {txid}')
                 self.db.add_islock(txid, self.get_local_height())
                 self._get_addr_balance_cache = {}  # invalidate cache
@@ -192,8 +192,8 @@ class AddressSynchronizer(Logger):
                 asyncio.run_coroutine_threadsafe(self.verifier.stop(), self.network.asyncio_loop)
                 self.verifier = None
             self.network.unregister_callback(self.on_blockchain_updated)
-            dash_net = self.network.dash_net
-            dash_net.unregister_callback(self.on_dash_islock)
+            terracoin_net = self.network.terracoin_net
+            terracoin_net.unregister_callback(self.on_terracoin_islock)
             self.db.put('stored_height', self.get_local_height())
 
     def add_address(self, address):

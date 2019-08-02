@@ -488,7 +488,7 @@ def deserialize(raw: str, force_full_parse=False, expect_trailing_data=False, ra
     else:
         vds.input = raw_bytes
     vds.read_cursor = start_position
-    return read_vds(vds, d, full_parse, alone_data=True, expect_trailing_data, expect_trailing_bytes)
+    return read_vds(vds, d, full_parse, True, expect_trailing_data, expect_trailing_bytes)
 
 
 def read_vds(vds, d, full_parse, alone_data=False, expect_trailing_data=False, expect_trailing_bytes=False):
@@ -688,11 +688,12 @@ class Transaction:
         #d = deserialize(self.raw, force_full_parse)
         if self.expect_trailing_data:
             d, start_position = deserialize(self.raw, force_full_parse, expect_trailing_data=self.expect_trailing_data, raw_bytes=self.raw_bytes, expect_trailing_bytes=self.expect_trailing_bytes, copy_input=self.copy_input, start_position=self.start_position)
+            return self.set_data_from_dict(d, start_position)
         else:
             d = deserialize(self.raw, force_full_parse, raw_bytes=self.raw_bytes, start_position=self.start_position)
-        return self.set_data_from_dict(d)
-    
-    def set_data_from_dict(self, d):
+            return self.set_data_from_dict(d)
+   
+    def set_data_from_dict(self, d, start_position=0):
         self._inputs = d['inputs']
         self._outputs = [TxOutput(x['type'], x['address'], x['value']) for x in d['outputs']]
         self.locktime = d['lockTime']
@@ -702,6 +703,10 @@ class Transaction:
         self.is_partial_originally = d['partial']
         # Auxpow
         #return d
+        if self.expect_trailing_data is None:
+            self.expect_trailing_data = False
+        if self.expect_trailing_bytes is None:
+            self.expect_trailing_bytes = False
         if self.expect_trailing_data:
             if self.expect_trailing_bytes:
                 if self.raw is not None:

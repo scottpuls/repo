@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Dash-Electrum - lightweight Dash client
+# Terracoin-Electrum - lightweight Terracoin client
 # Copyright (C) 2019 Dash Developers
 #
 # Permission is hereby granted, free of charge, to any person
@@ -32,7 +32,7 @@ from collections import namedtuple, defaultdict
 from struct import pack
 
 from .crypto import sha256d
-from .dash_msg import DashSMLEntry, DashQFCommitMsg
+from .terracoin_msg import TerracoinSMLEntry, TerracoinQFCommitMsg
 from .logging import Logger
 from .simple_config import SimpleConfig
 from .transaction import Transaction, BCDataStream, SerializationError
@@ -49,7 +49,7 @@ RECENT_LIST_FNAME = 'recent_protx_list.gz'
 
 
 class PartialMerkleTree(namedtuple('PartialMerkleTree', 'total hashes flags')):
-    '''Class representing CPartialMerkleTree of dashd'''
+    '''Class representing CPartialMerkleTree of terracoind'''
     @classmethod
     def read_bytes(cls, raw_bytes):
         vds = BCDataStream()
@@ -97,8 +97,8 @@ class MNList(Logger):
         self.config = (SimpleConfig(config) if isinstance(config, dict)
                        else config)
         self.network = network
-        self.dash_net = network.dash_net
-        self.dash_net_enabled = config.get('run_dash_net', True)
+        self.terracoin_net = network.terracoin_net
+        self.terracoin_net_enabled = config.get('run_terracoin_net', True)
         self.load_mns = config.get('protx_load_mns', True)
         self.load_mns = False if IS_ANDROID else self.load_mns
 
@@ -173,11 +173,11 @@ class MNList(Logger):
                 rl = json.loads(data.decode('utf-8'))
                 # Read values from hex strings
                 for k, v in rl['protx_mns'].items():
-                    rl['protx_mns'][k] = DashSMLEntry.from_hex(v)
+                    rl['protx_mns'][k] = TerracoinSMLEntry.from_hex(v)
                 for k, v in rl['sml_hashes'].items():
                     rl['sml_hashes'][k] = bfh(v)[::-1]
                 for k, v in rl['quorums'].items():
-                    rl['quorums'][k] = DashQFCommitMsg.from_hex(v)
+                    rl['quorums'][k] = TerracoinQFCommitMsg.from_hex(v)
                 for k, v in rl['llmq_hashes'].items():
                     rl['llmq_hashes'][k] = bfh(v)[::-1]
                 return rl
@@ -223,8 +223,8 @@ class MNList(Logger):
         self.protx_state = MNList.DIP3_UNKNOWN
         self.diff_deleted_mns = []
         self.diff_hashes = []
-        if self.dash_net_enabled:
-            coro = self.dash_net.getmnlistd()
+        if self.terracoin_net_enabled:
+            coro = self.terracoin_net.getmnlistd()
         else:
             coro = self.network.request_protx_diff()
         asyncio.run_coroutine_threadsafe(coro, self.network.asyncio_loop)
@@ -262,31 +262,31 @@ class MNList(Logger):
         self.trigger_callback(key, value)
 
     async def on_network_status(self, event):
-        if (not self.dash_net_enabled
+        if (not self.terracoin_net_enabled
                 and self.network.is_connected()
                 and not self.protx_loaded):
             await self.network.request_protx_diff()
 
     async def on_network_updated(self, key):
-        if self.dash_net_enabled:
+        if self.terracoin_net_enabled:
             if not self.llmq_loaded:
-                await self.dash_net.getmnlistd()
+                await self.terracoin_net.getmnlistd()
             elif not self.protx_loaded:
-                await self.dash_net.getmnlistd(get_mns=True)
+                await self.terracoin_net.getmnlistd(get_mns=True)
         elif not self.protx_loaded:
             await self.network.request_protx_diff()
 
-    async def on_dash_net_updated(self, key, *args):
+    async def on_terracoin_net_updated(self, key, *args):
         status = args[0]
         if status == 'enabled':
-            self.dash_net_enabled = True
+            self.terracoin_net_enabled = True
         elif status == 'disabled':
-            self.dash_net_enabled = False
-        if self.dash_net_enabled:
+            self.terracoin_net_enabled = False
+        if self.terracoin_net_enabled:
             if not self.llmq_loaded:
-                await self.dash_net.getmnlistd()
+                await self.terracoin_net.getmnlistd()
             elif not self.protx_loaded:
-                await self.dash_net.getmnlistd(get_mns=True)
+                await self.terracoin_net.getmnlistd(get_mns=True)
         elif not self.protx_loaded:
             await self.network.request_protx_diff()
 
@@ -297,10 +297,10 @@ class MNList(Logger):
         self.network.register_callback(self.on_network_status, ['status'])
         self.network.register_callback(self.on_network_updated,
                                        ['network_updated'])
-        # dash_net
-        self.dash_net.register_callback(self.on_dash_net_updated,
-                                        ['dash-net-updated'])
-        self.dash_net.register_callback(self.on_mnlistdiff, ['mnlistdiff'])
+        # terracoin_net
+        self.terracoin_net.register_callback(self.on_terracoin_net_updated,
+                                        ['terracoin-net-updated'])
+        self.terracoin_net.register_callback(self.on_mnlistdiff, ['mnlistdiff'])
 
     def stop(self):
         self._save_recent_list()
@@ -309,9 +309,9 @@ class MNList(Logger):
         self.network.unregister_callback(self.on_protx_info)
         self.network.unregister_callback(self.on_network_updated)
         self.network.unregister_callback(self.on_network_status)
-        # dash_net
-        self.dash_net.unregister_callback(self.on_dash_net_updated)
-        self.dash_net.unregister_callback(self.on_mnlistdiff)
+        # terracoin_net
+        self.terracoin_net.unregister_callback(self.on_terracoin_net_updated)
+        self.terracoin_net.unregister_callback(self.on_mnlistdiff)
 
     def calc_responsible_quorum(self, llmqType, request_id):
         res = []
@@ -524,7 +524,7 @@ class MNList(Logger):
 
             return True
 
-        if await self.dash_net.loop.run_in_executor(None, process_mnlistdiff):
+        if await self.terracoin_net.loop.run_in_executor(None, process_mnlistdiff):
             if self.diff_deleted_mns:
                 for h in self.diff_deleted_mns:
                     self.protx_info.pop(h, None)
@@ -535,9 +535,9 @@ class MNList(Logger):
                         await self.network.request_protx_info(h)
 
             if not self.llmq_loaded:
-                await self.dash_net.getmnlistd()
+                await self.terracoin_net.getmnlistd()
             elif not self.protx_loaded:
-                await self.dash_net.getmnlistd(get_mns=True)
+                await self.terracoin_net.getmnlistd(get_mns=True)
             self.notify('mn-list-diff-updated')
 
     async def on_protx_diff(self, key, value):
@@ -597,7 +597,7 @@ class MNList(Logger):
 
             for mn in diff.get('mnList', []):
                 protx_hash = mn.get('proRegTxHash', '')
-                sml_entry = DashSMLEntry.from_dict(mn)
+                sml_entry = TerracoinSMLEntry.from_dict(mn)
                 sml_hash = sha256d(sml_entry.serialize())
                 protx_new[protx_hash] = sml_entry
                 sml_hashes_new[protx_hash] = sml_hash
@@ -624,7 +624,7 @@ class MNList(Logger):
                                         diff.get('mnList', [])))
             return True
 
-        if await self.dash_net.loop.run_in_executor(None, process_protx_diff):
+        if await self.terracoin_net.loop.run_in_executor(None, process_protx_diff):
             if self.diff_deleted_mns:
                 for h in self.diff_deleted_mns:
                     self.protx_info.pop(h, None)

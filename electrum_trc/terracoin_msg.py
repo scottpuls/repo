@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Dash-Electrum - lightweight Dash client
+# Terracoin-Electrum - lightweight Terracoin client
 # Copyright (C) 2019 Dash Developers
 #
 # Permission is hereby granted, free of charge, to any person
@@ -32,7 +32,7 @@ from struct import pack
 from .crypto import sha256d
 from .bitcoin import hash160_to_p2pkh, b58_address_to_hash160
 from .ecc import msg_magic
-from .dash_tx import (to_compact_size, to_varbytes, serialize_ip, str_ip,
+from .terracoin_tx import (to_compact_size, to_varbytes, serialize_ip, str_ip,
                       service_to_ip_port, TxOutPoint, read_uint16_nbo)
 from .transaction import Transaction, BCDataStream, SerializationError
 from .util import bh2u, bfh
@@ -51,8 +51,8 @@ FILTERLOAD_MAX_FILTER_BYTES = 36000
 FILTERADD_MAX_ELEMENT_BYTES = 520
 
 
-class DashMsgError(Exception):
-    """Thrown when there's a problem with Dash message serialize/deserialize"""
+class TerracoinMsgError(Exception):
+    """Thrown when there's a problem with Terracoin message serialize/deserialize"""
 
 
 class IntEnumWithCheck(IntEnum):
@@ -62,7 +62,7 @@ class IntEnumWithCheck(IntEnum):
         return any(value == item.value for item in cls)
 
 
-class DashType(IntEnumWithCheck):
+class TerracoinType(IntEnumWithCheck):
     '''Enum representing Inventory object types'''
     MSG_TX = 1
     MSG_BLOCK = 2
@@ -99,18 +99,15 @@ class DashType(IntEnumWithCheck):
 
 
 class SporkID(IntEnumWithCheck):
-    '''Enum representing known Dash spork IDs'''
-    SPORK_2_INSTANTSEND_ENABLED = 10001
-    SPORK_3_INSTANTSEND_BLOCK_FILTERING = 10002
-    SPORK_5_INSTANTSEND_MAX_VALUE = 10004
-    SPORK_6_NEW_SIGS = 10005
-    SPORK_9_SUPERBLOCKS_ENABLED = 10008
-    SPORK_12_RECONSIDER_BLOCKS = 10011
-    SPORK_15_DETERMINISTIC_MNS_ENABLED = 10014
-    SPORK_16_INSTANTSEND_AUTOLOCKS = 10015
-    SPORK_17_QUORUM_DKG_ENABLED = 10016
-    SPORK_19_CHAINLOCKS_ENABLED = 10018
-    SPORK_20_INSTANTSEND_LLMQ_BASED = 10019
+    '''Enum representing known Terracoin spork IDs'''
+    SPORK_1_INSTANTSEND_ENABLED = 10001
+    SPORK_2_INSTANTSEND_BLOCK_FILTERING = 10002
+    SPORK_3_INSTANTSEND_MAX_VALUE = 10003
+    SPORK_4_MASTERNODE_PAYMENT_ENFORCEMENT = 10004
+    SPORK_5_SUPERBLOCKS_ENABLED = 10005
+    SPORK_6_RECONSIDER_BLOCKS = 10006
+    SPORK_7_REQUIRE_SENTINEL_FLAG = 10007
+    SPORK_8_MASTERNODE_PAY_PROTO_MIN = 10008
 
 
 class LLMQType(IntEnumWithCheck):
@@ -121,11 +118,11 @@ class LLMQType(IntEnumWithCheck):
     LLMQ_5_60 = 100  # For testing only
 
 
-class DashNetIPAddr(namedtuple('DashNetIPAddr', 'time services ip port')):
+class TerracoinNetIPAddr(namedtuple('TerracoinNetIPAddr', 'time services ip port')):
     '''Class representing addr mesage payload'''
 
     def __str__(self):
-        return ('DashNetIPAddr: time: %s,'
+        return ('TerracoinNetIPAddr: time: %s,'
                 ' services: 0x%.16X, ip: %s, port: %s' %
                 (self.time, self.services, str_ip(self.ip), self.port))
 
@@ -149,13 +146,13 @@ class DeletedQuorum(namedtuple('DeletedQuorum', 'llmqType quorumHash')):
         return DeletedQuorum(llmqType, quorumHash)
 
 
-class DashSMLEntry(namedtuple('DashSMLEntry',
+class TerracoinSMLEntry(namedtuple('TerracoinSMLEntry',
                               'proRegTxHash confirmedHash ipAddress port'
                               ' pubKeyOperator keyIDVoting isValid')):
     '''Class representing Simplified Masternode List entry'''
 
     def __str__(self):
-        return ('DashSMLEntry: proRegTxHash: %s, confirmedHash: %s,'
+        return ('TerracoinSMLEntry: proRegTxHash: %s, confirmedHash: %s,'
                 ' ipAddress: %s, port: %s, pubKeyOperator: %s,'
                 ' keyIDVoting: %s, isValid: %s' %
                 (bh2u(self.proRegTxHash[::-1]), bh2u(self.confirmedHash[::-1]),
@@ -180,8 +177,8 @@ class DashSMLEntry(namedtuple('DashSMLEntry',
         pubKeyOperator = bfh(d['pubKeyOperator'])
         keyIDVoting = b58_address_to_hash160(d['votingAddress'])[1]
         isValid = d['isValid']
-        return DashSMLEntry(proRegTxHash, confirmedHash, ipAddress,
-                            port, pubKeyOperator, keyIDVoting, isValid)
+        return TerracoinSMLEntry(proRegTxHash, confirmedHash, ipAddress,
+                                 port, pubKeyOperator, keyIDVoting, isValid)
 
     def serialize(self, as_hex=False):
         assert len(self.proRegTxHash) == 32
@@ -220,43 +217,43 @@ class DashSMLEntry(namedtuple('DashSMLEntry',
         isValid = vds.read_uchar()                      # isValid
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashSMLEntry(proRegTxHash, confirmedHash, ipAddress,
-                            port, pubKeyOperator, keyIDVoting, isValid)
+        return TerracoinSMLEntry(proRegTxHash, confirmedHash, ipAddress,
+                                 port, pubKeyOperator, keyIDVoting, isValid)
 
 
-class DashInventory(namedtuple('DashInventory', 'type hash')):
+class TerracoinInventory(namedtuple('TerracoinInventory', 'type hash')):
     '''Class representing addr mesage payload'''
 
     def __str__(self):
         tv = self.type
-        tn = DashType(tv).name if DashType.has_value(tv) else tv
-        return ('DashInventory: %s %s' % (tn, bh2u(self.hash[::-1])))
+        tn = TerracoinType(tv).name if TerracoinType.has_value(tv) else tv
+        return ('TerracoinInventory: %s %s' % (tn, bh2u(self.hash[::-1])))
 
 
-class DashCmd:
-    '''Class representing Dash network message packed with msg header cmd'''
+class TerracoinCmd:
+    '''Class representing Terracoin network message packed with msg header cmd'''
 
     def __init__(self, cmd, payload=None):
         vds = BCDataStream()
         vds.clear_and_set_bytes(payload)
         if cmd == 'version':
-            self.payload = DashVersionMsg.read_vds(vds, alone_data=True)
+            self.payload = TerracoinVersionMsg.read_vds(vds, alone_data=True)
         elif cmd == 'ping':
-            self.payload = DashPingMsg.read_vds(vds, alone_data=True)
+            self.payload = TerracoinPingMsg.read_vds(vds, alone_data=True)
         elif cmd == 'pong':
-            self.payload = DashPongMsg.read_vds(vds, alone_data=True)
+            self.payload = TerracoinPongMsg.read_vds(vds, alone_data=True)
         elif cmd == 'addr':
-            self.payload = DashAddrMsg.read_vds(vds, alone_data=True)
+            self.payload = TerracoinAddrMsg.read_vds(vds, alone_data=True)
         elif cmd == 'inv':
-            self.payload = DashInvMsg.read_vds(vds, alone_data=True)
+            self.payload = TerracoinInvMsg.read_vds(vds, alone_data=True)
         elif cmd == 'spork':
-            self.payload = DashSporkMsg.read_vds(vds, alone_data=True)
+            self.payload = TerracoinSporkMsg.read_vds(vds, alone_data=True)
         elif cmd == 'islock':
-            self.payload = DashISLockMsg.read_vds(vds, alone_data=True)
+            self.payload = TerracoinISLockMsg.read_vds(vds, alone_data=True)
         elif cmd == 'mnlistdiff':
-            self.payload = DashMNListDiffMsg.read_vds(vds, alone_data=True)
+            self.payload = TerracoinMNListDiffMsg.read_vds(vds, alone_data=True)
         elif cmd == 'qfcommit':
-            self.payload = DashQFCommitMsg.read_vds(vds, alone_data=True)
+            self.payload = TerracoinQFCommitMsg.read_vds(vds, alone_data=True)
         else:
             self.payload = payload
         self.cmd = cmd
@@ -270,8 +267,8 @@ class DashCmd:
             return f'{self.cmd}: {self.payload}'
 
 
-class DashMsgBase:
-    '''Base Class representing Dash Network messages'''
+class TerracoinMsgBase:
+    '''Base Class representing Terracoin Network messages'''
     def __init__(self, *args, **kwargs):
         if args and not kwargs:
             argsl = list(args)
@@ -284,7 +281,7 @@ class DashMsgBase:
             raise ValueError('__init__ works with all args or all kwargs')
 
 
-class DashVersionMsg(DashMsgBase):
+class TerracoinVersionMsg(TerracoinMsgBase):
     '''Class representing version message'''
 
     fields = ('version services timestamp '
@@ -294,10 +291,10 @@ class DashVersionMsg(DashMsgBase):
               'relay mnauth_challenge').split()
 
     def __init__(self, *args, **kwargs):
-        super(DashVersionMsg, self).__init__(*args, **kwargs)
+        super(TerracoinVersionMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        res = ('DashVersionMsg: version: %s,'
+        res = ('TerracoinVersionMsg: version: %s,'
                ' services: 0x%.16X, timestamp: %s,'
                ' recv_services: 0x%.16X, recv_ip: %s, recv_port: %s,'
                ' trans_services: 0x%.16X, trans_ip: %s, trans_port: %s,'
@@ -355,7 +352,7 @@ class DashVersionMsg(DashMsgBase):
         nonce = vds.read_uint64()                       # nonce
         user_agent_csize = vds.read_compact_size()
         if user_agent_csize > MAX_USER_AGENT_SIZE:
-            raise DashMsgError('version msg: user_agent too long')
+            raise TerracoinMsgError('version msg: user_agent too long')
         user_agent = vds.read_bytes(user_agent_csize)   # user_agent
         start_height = vds.read_int32()                 # start_height
 
@@ -371,23 +368,23 @@ class DashVersionMsg(DashMsgBase):
             mnauth_challenge = vds.read_bytes(32)
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashVersionMsg(version, services, timestamp,
+        return TerracoinVersionMsg(version, services, timestamp,
                               recv_services, recv_ip, recv_port,
                               trans_services, trans_ip, trans_port,
                               nonce, user_agent, start_height,
                               relay, mnauth_challenge)
 
 
-class DashPingMsg(DashMsgBase):
+class TerracoinPingMsg(TerracoinMsgBase):
     '''Class representing ping message'''
 
     fields = 'nonce'.split()
 
     def __init__(self, *args, **kwargs):
-        super(DashPingMsg, self).__init__(*args, **kwargs)
+        super(TerracoinPingMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        return 'DashPingMsg: nonce: %s' % self.nonce
+        return 'TerracoinPingMsg: nonce: %s' % self.nonce
 
     def serialize(self):
         return pack('<Q', self.nonce)                   # nonce
@@ -397,40 +394,40 @@ class DashPingMsg(DashMsgBase):
         nonce = vds.read_uint64()                       # nonce
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashPingMsg(nonce)
+        return TerracoinPingMsg(nonce)
 
 
-class DashPongMsg(DashPingMsg):
+class TerracoinPongMsg(TerracoinPingMsg):
     '''Class representing pong message'''
 
     def __str__(self):
-        return 'DashPongMsg: nonce: %s' % self.nonce
+        return 'TerracoinPongMsg: nonce: %s' % self.nonce
 
     @classmethod
     def read_vds(cls, vds, alone_data=False):
         nonce = vds.read_uint64()                       # nonce
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashPongMsg(nonce)
+        return TerracoinPongMsg(nonce)
 
 
-class DashAddrMsg(DashMsgBase):
+class TerracoinAddrMsg(TerracoinMsgBase):
     '''Class representing addr message'''
 
     fields = 'addresses'.split()
 
     def __init__(self, *args, **kwargs):
-        super(DashAddrMsg, self).__init__(*args, **kwargs)
+        super(TerracoinAddrMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
         addr_str = [str(a) for a in self.addresses]
-        return ('DashAddrMsg: addresses(%s): %s' %
+        return ('TerracoinAddrMsg: addresses(%s): %s' %
                 (len(self.addresses), addr_str))
 
     def serialize(self):
         addr_cnt = len(self.addresses)
         if addr_cnt > MAX_ADDRESSES:
-            raise DashMsgError('addr msg: too many addresses to send')
+            raise TerracoinMsgError('addr msg: too many addresses to send')
         res = to_compact_size(addr_cnt)
         for a in self.addresses:
             ip_addr = serialize_ip(a)
@@ -444,30 +441,30 @@ class DashAddrMsg(DashMsgBase):
     def read_vds(cls, vds, alone_data=False):
         addr_cnt = vds.read_compact_size()
         if addr_cnt > MAX_ADDRESSES:
-            raise DashMsgError('addr msg: too many addresses')
+            raise TerracoinMsgError('addr msg: too many addresses')
         addresses = []
         for addr_i in range(addr_cnt):
             time = vds.read_uint32()                    # time
             services = vds.read_uint64()                # services
             ip_addr = ip_address(vds.read_bytes(16))    # ip
             port = read_uint16_nbo(vds)                 # port
-            addresses.append(DashNetIPAddr(time, services, ip_addr, port))
+            addresses.append(TerracoinNetIPAddr(time, services, ip_addr, port))
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashAddrMsg(addresses)
+        return TerracoinAddrMsg(addresses)
 
 
-class DashInvMsg(DashMsgBase):
+class TerracoinInvMsg(TerracoinMsgBase):
     '''Class representing inv message'''
 
     fields = 'inventory'.split()
 
     def __init__(self, *args, **kwargs):
-        super(DashInvMsg, self).__init__(*args, **kwargs)
+        super(TerracoinInvMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
         inv_str = [str(i) for i in self.inventory]
-        return ('DashInvMsg: inventory(%s): %s' %
+        return ('TerracoinInvMsg: inventory(%s): %s' %
                 (len(self.inventory), inv_str))
 
     def serialize(self):
@@ -476,7 +473,7 @@ class DashInvMsg(DashMsgBase):
     def _serialize(self, msg):
         inv_cnt = len(self.inventory)
         if inv_cnt > MAX_INV_ENTRIES:
-            raise DashMsgError(f'{msg} msg: too long inventory to send')
+            raise TerracoinMsgError(f'{msg} msg: too long inventory to send')
         res = to_compact_size(inv_cnt)
         for i in self.inventory:
             res += pack('<I', i.type)                   # type
@@ -486,29 +483,29 @@ class DashInvMsg(DashMsgBase):
 
     @classmethod
     def read_vds(cls, vds, alone_data=False):
-        return DashInvMsg(cls._read_vds(vds, 'inv', alone_data))
+        return TerracoinInvMsg(cls._read_vds(vds, 'inv', alone_data))
 
     @classmethod
     def _read_vds(cls, vds, msg, alone_data=False):
         inv_cnt = vds.read_compact_size()
         if inv_cnt > MAX_INV_ENTRIES:
-            raise DashMsgError(f'{msg} msg: too long inventory')
+            raise TerracoinMsgError(f'{msg} msg: too long inventory')
         inventory = []
         for inv_i in range(inv_cnt):
             inv_type = vds.read_uint32()                # type
             inv_hash = vds.read_bytes(32)               # hash
-            inventory.append(DashInventory(inv_type, inv_hash))
+            inventory.append(TerracoinInventory(inv_type, inv_hash))
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
         return inventory
 
 
-class DashGetDataMsg(DashInvMsg):
+class TerracoinGetDataMsg(TerracoinInvMsg):
     '''Class representing getdata message'''
 
     def __str__(self):
         inv_str = [str(i) for i in self.inventory]
-        return ('DashGetDataMsg: inventory(%s): %s' %
+        return ('TerracoinGetDataMsg: inventory(%s): %s' %
                 (len(self.inventory), inv_str))
 
     def serialize(self):
@@ -516,21 +513,21 @@ class DashGetDataMsg(DashInvMsg):
 
     @classmethod
     def read_vds(cls, vds, alone_data=False):
-        return DashGetDataMsg(cls._read_vds(vds, 'getdata', alone_data))
+        return TerracoinGetDataMsg(cls._read_vds(vds, 'getdata', alone_data))
 
 
-class DashSporkMsg(DashMsgBase):
+class TerracoinSporkMsg(TerracoinMsgBase):
     '''Class representing islock message'''
 
     fields = 'nSporkID nValue nTimeSigned vchSig'.split()
 
     def __init__(self, *args, **kwargs):
-        super(DashSporkMsg, self).__init__(*args, **kwargs)
+        super(TerracoinSporkMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
         is_known_id = SporkID.has_value(self.nSporkID)
         spork_id = SporkID(self.nSporkID) if is_known_id else self.nSporkID
-        return ('DashSporkMsg: nSporkID: %s, nValue: %s,'
+        return ('TerracoinSporkMsg: nSporkID: %s, nValue: %s,'
                 ' nTimeSigned: %s, vchSig: %s' %
                 (spork_id, self.nValue, self.nTimeSigned, bh2u(self.vchSig)))
 
@@ -541,11 +538,11 @@ class DashSporkMsg(DashMsgBase):
         nTimeSigned = vds.read_int64()                  # nTimeSigned
         vchSig_len = vds.read_compact_size()
         if vchSig_len != 65:
-            raise DashMsgError(f'spork msg: wrong vchSig length')
+            raise TerracoinMsgError(f'spork msg: wrong vchSig length')
         vchSig = vds.read_bytes(65)                     # vchSig
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashSporkMsg(nSporkID, nValue, nTimeSigned, vchSig)
+        return TerracoinSporkMsg(nSporkID, nValue, nTimeSigned, vchSig)
 
     def msg_hash(self, new_sigs=True):
         if new_sigs:
@@ -557,17 +554,17 @@ class DashSporkMsg(DashMsgBase):
         return sha256d(msg_magic(msg_str.encode()))
 
 
-class DashISLockMsg(DashMsgBase):
+class TerracoinISLockMsg(TerracoinMsgBase):
     '''Class representing islock message'''
 
     fields = 'inputs txid sig'.split()
 
     def __init__(self, *args, **kwargs):
-        super(DashISLockMsg, self).__init__(*args, **kwargs)
+        super(TerracoinISLockMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
         inputs_str = [str(i) for i in self.inputs]
-        return ('DashISLockMsg: inputs: %s, txid: %s, sig: %s' %
+        return ('TerracoinISLockMsg: inputs: %s, txid: %s, sig: %s' %
                 (inputs_str, bh2u(self.txid[::-1]), self.sig))
 
     @classmethod
@@ -582,7 +579,7 @@ class DashISLockMsg(DashMsgBase):
         sig = vds.read_bytes(96)                        # sig
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashISLockMsg(inputs, txid, sig)
+        return TerracoinISLockMsg(inputs, txid, sig)
 
     def calc_request_id(self):
         prehash = b'\x06islock' + to_compact_size(len(self.inputs))
@@ -599,16 +596,16 @@ class DashISLockMsg(DashMsgBase):
         )
 
 
-class DashCLSigMsg(DashMsgBase):
+class TerracoinCLSigMsg(TerracoinMsgBase):
     '''Class representing clsig message'''
 
     fields = 'nHeight blockHash sig'.split()
 
     def __init__(self, *args, **kwargs):
-        super(DashCLSigMsg, self).__init__(*args, **kwargs)
+        super(TerracoinCLSigMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        return ('DashCLSigMsg: nHeight: %s, blockHash: %s, sig: %s' %
+        return ('TerracoinCLSigMsg: nHeight: %s, blockHash: %s, sig: %s' %
                 (self.nHeight, bh2u(self.blockHash[::-1]), self.sig))
 
     @classmethod
@@ -618,7 +615,7 @@ class DashCLSigMsg(DashMsgBase):
         sig = vds.read_bytes(96)                        # sig
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashCLSigMsg(nHeight, blockHash, sig)
+        return TerracoinCLSigMsg(nHeight, blockHash, sig)
 
     def calc_request_id(self):
         return sha256d(b'\x05clsig' + pack('<I', self.nHeight))
@@ -632,16 +629,16 @@ class DashCLSigMsg(DashMsgBase):
         )
 
 
-class DashGetMNListDMsg(DashMsgBase):
+class TerracoinGetMNListDMsg(TerracoinMsgBase):
     '''Class representing getmnlistd message'''
 
     fields = 'baseBlockHash blockHash'.split()
 
     def __init__(self, *args, **kwargs):
-        super(DashGetMNListDMsg, self).__init__(*args, **kwargs)
+        super(TerracoinGetMNListDMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        return ('DashGetMNListDMsg: baseBlockHash: %s, blockHash: %s' %
+        return ('TerracoinGetMNListDMsg: baseBlockHash: %s, blockHash: %s' %
                 (bh2u(self.baseBlockHash[::-1]), bh2u(self.blockHash[::-1])))
 
     def serialize(self):
@@ -658,10 +655,10 @@ class DashGetMNListDMsg(DashMsgBase):
         blockHash = vds.read_bytes(32)                  # blockHash
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashGetMNListDMsg(baseBlockHash, blockHash)
+        return TerracoinGetMNListDMsg(baseBlockHash, blockHash)
 
 
-class DashMNListDiffMsg(DashMsgBase):
+class TerracoinMNListDiffMsg(TerracoinMsgBase):
     '''Class representing mnlistdiff message'''
 
     fields = ('baseBlockHash blockHash totalTransactions merkleHashes'
@@ -669,7 +666,7 @@ class DashMNListDiffMsg(DashMsgBase):
               ' newQuorums').split()
 
     def __init__(self, *args, **kwargs):
-        super(DashMNListDiffMsg, self).__init__(*args, **kwargs)
+        super(TerracoinMNListDiffMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
         mh_cnt = len(self.merkleHashes)
@@ -683,7 +680,7 @@ class DashMNListDiffMsg(DashMsgBase):
         deletedQuorums = [str(dq) for dq in self.deletedQuorums]
         nq_cnt = len(self.newQuorums)
         newQuorums = [str(qfc) for qfc in self.newQuorums]
-        return ('DashMNListDiffMsg: baseBlockHash: %s, blockHash: %s,'
+        return ('TerracoinMNListDiffMsg: baseBlockHash: %s, blockHash: %s,'
                 ' totalTransactions: %s, merkleHashes(%s): %s,'
                 ' merkleFlags: %s, cbTx: %s,'
                 ' deletedMNs(%s): %s, mnList(%s): %s,'
@@ -720,7 +717,7 @@ class DashMNListDiffMsg(DashMsgBase):
         mnl_cnt = vds.read_compact_size()               # mnList cnt
         mnList = []                                     # mnList
         for mn_i in range(mnl_cnt):
-            mnList.append(DashSMLEntry.read_vds(vds))
+            mnList.append(TerracoinSMLEntry.read_vds(vds))
 
         deletedQuorums = []                             # deletedQuorums
         newQuorums = []                                 # newQuorums
@@ -730,15 +727,15 @@ class DashMNListDiffMsg(DashMsgBase):
                 deletedQuorums.append(DeletedQuorum.read_vds(vds))
             nq_cnt = vds.read_compact_size()            # newQuorums cnt
             for nq_i in range(nq_cnt):
-                newQuorums.append(DashQFCommitMsg.read_vds(vds))
+                newQuorums.append(TerracoinQFCommitMsg.read_vds(vds))
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashMNListDiffMsg(baseBlockHash, blockHash, totalTransactions,
+        return TerracoinMNListDiffMsg(baseBlockHash, blockHash, totalTransactions,
                                  merkleHashes, merkleFlags, cbTx, deletedMNs,
                                  mnList, deletedQuorums, newQuorums)
 
 
-class DashQFCommitMsg(DashMsgBase):
+class TerracoinQFCommitMsg(TerracoinMsgBase):
     '''Class representing qfcommit message'''
 
     fields = ('version llmqType quorumHash signersSize signers'
@@ -746,13 +743,13 @@ class DashQFCommitMsg(DashMsgBase):
               ' quorumSig sig').split()
 
     def __init__(self, *args, **kwargs):
-        super(DashQFCommitMsg, self).__init__(*args, **kwargs)
+        super(TerracoinQFCommitMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
         llmqType = (LLMQType(self.llmqType)
                         if LLMQType.has_value(self.llmqType)
                         else self.llmqType)
-        return ('DashQFCommitMsg: version: %s, llmqType: %s(%s),'
+        return ('TerracoinQFCommitMsg: version: %s, llmqType: %s(%s),'
                 ' quorumHash: %s, signers(%s): %s,'
                 ' validMembers(%s): %s, quorumPublicKey: %s,'
                 ' quorumVvecHash: %s, quorumSig: %s, sig: %s' %
@@ -812,22 +809,22 @@ class DashQFCommitMsg(DashMsgBase):
         sig = vds.read_bytes(96)                        # sig
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashQFCommitMsg(version, llmqType, quorumHash,
+        return TerracoinQFCommitMsg(version, llmqType, quorumHash,
                                signers_size, signers, valid_m_size,
                                validMembers, quorumPublicKey,
                                quorumVvecHash, quorumSig, sig)
 
 
-class DashFliterLoadMsg(DashMsgBase):
+class TerracoinFliterLoadMsg(TerracoinMsgBase):
     '''Class representing filterload message'''
 
     fields = 'filter nHashFuncs nTweak nFlags'.split()
 
     def __init__(self, *args, **kwargs):
-        super(DashFliterLoadMsg, self).__init__(*args, **kwargs)
+        super(TerracoinFliterLoadMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        return ('DashFliterLoadMsg: filter: %s, nHashFuncs: %s,'
+        return ('TerracoinFliterLoadMsg: filter: %s, nHashFuncs: %s,'
                 ' nTweak: %s, nFlags: 0x%.2X' %
                 (bh2u(self.filter), self.nHashFuncs, self.nTweak, self.nFlags))
 
@@ -845,28 +842,28 @@ class DashFliterLoadMsg(DashMsgBase):
     def read_vds(cls, vds, alone_data=False):
         filter_bcnt = vds.read_compact_size()
         if filter_bcnt > FILTERLOAD_MAX_FILTER_BYTES:
-            raise DashMsgError(f'filterload msg: too long filter filed')
+            raise TerracoinMsgError(f'filterload msg: too long filter filed')
         filter_bytes = vds.read_bytes(filter_bcnt)      # filter
         nHashFuncs = vds.read_uint32()                  # nHashFuncs
         if nHashFuncs > FILTERLOAD_MAX_HASH_FUNCS:
-            raise DashMsgError(f'filterload msg: too high value of nHashFuncs')
+            raise TerracoinMsgError(f'filterload msg: too high value of nHashFuncs')
         nTweak = vds.read_uint32()                      # nTweak
         nFlags = vds.read_uchar()                       # nFlags
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashFliterLoadMsg(filter_bytes, nHashFuncs, nTweak, nFlags)
+        return TerracoinFliterLoadMsg(filter_bytes, nHashFuncs, nTweak, nFlags)
 
 
-class DashFilterAddMsg(DashMsgBase):
+class TerracoinFilterAddMsg(TerracoinMsgBase):
     '''Class representing filteradd message'''
 
     fields = 'element'.split()
 
     def __init__(self, *args, **kwargs):
-        super(DashFilterAddMsg, self).__init__(*args, **kwargs)
+        super(TerracoinFilterAddMsg, self).__init__(*args, **kwargs)
 
     def __str__(self):
-        return ('DashFilterAddMsg: element: %s' % self.element)
+        return ('TerracoinFilterAddMsg: element: %s' % self.element)
 
     def serialize(self):
         assert len(self.element) <= FILTERADD_MAX_ELEMENT_BYTES
@@ -876,8 +873,8 @@ class DashFilterAddMsg(DashMsgBase):
     def read_vds(cls, vds, alone_data=False):
         element_bcnt = vds.read_compact_size()
         if element_bcnt > FILTERADD_MAX_ELEMENT_BYTES:
-            raise DashMsgError(f'filteradd msg: too long element field')
+            raise TerracoinMsgError(f'filteradd msg: too long element field')
         element_bytes = vds.read_bytes(element_bcnt)    # element
         if alone_data and vds.can_read_more():
             raise SerializationError(f'{cls}: extra junk at the end')
-        return DashFilterAddMsg(element_bytes)
+        return TerracoinFilterAddMsg(element_bytes)

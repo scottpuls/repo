@@ -17,7 +17,7 @@ from electrum_trc import bitcoin
 from electrum_trc.i18n import _
 from electrum_trc.masternode import MasternodeAnnounce
 from electrum_trc.masternode_manager import parse_masternode_conf
-from electrum_trc.protx import MNList
+from electrum_trc.protx_list import MNList
 from electrum_trc.util import bfh
 from electrum_trc.logging import Logger
 
