@@ -193,11 +193,7 @@ class Test_auxpow(SequentialTestCase):
     # coinbase header.
     def test_should_reject_coinbase_root_too_late(self):
         header_bytes = bfh(header_833204)
-        # We can't pass the real height because it's below a checkpoint, and
-        # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        #header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
-        # This isn't true for Terracoin
-        header = blockchain.deserialize_header(header_bytes, 833204)
+        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
 
         input_script = bfh(header['auxpow']['parent_coinbase_tx'].inputs()[0]['scriptSig'])
 
