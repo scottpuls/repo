@@ -63,7 +63,8 @@ Builder.load_string('''
             text: root.ua
             is_title: root.is_title
     CardSeparator:
-        color: [0.192, .498, 0.745, 1] if root.is_title else [.9, .9, .9, 1]
+        #color: [0.192, .498, 0.745, 1] if root.is_title else [.9, .9, .9, 1]
+        color: [0.192, 0.745, 0.470, 1] if root.is_title else [.9, .9, .9, 1]
 
 
 <ConnectedPeersPopup@Popup>
@@ -161,7 +162,8 @@ Builder.load_string('''
             text: root.value
             is_title: root.is_title
     CardSeparator:
-        color: [0.192, .498, 0.745, 1] if root.is_title else [.9, .9, .9, 1]
+        #color: [0.192, .498, 0.745, 1] if root.is_title else [.9, .9, .9, 1]
+        color: [0.192, 0.745, 0.470, 1] if root.is_title else [.9, .9, .9, 1]
 
 
 <SporksPopup@Popup>
@@ -211,7 +213,8 @@ Builder.load_string('''
             text: _('Remove')
             on_release: root.on_remove(root.peer if not root.is_title else '')
     CardSeparator:
-        color: [0.192, .498, 0.745, 1] if root.is_title else [.9, .9, .9, 1]
+        #color: [0.192, .498, 0.745, 1] if root.is_title else [.9, .9, .9, 1]
+        color: [0.192, 0.745, 0.470, 1] if root.is_title else [.9, .9, .9, 1]
 
 
 <BanlistPopup@Popup>

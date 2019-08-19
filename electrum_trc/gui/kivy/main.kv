@@ -182,12 +182,14 @@
 
 <SendReceiveBlueBottom@GridLayout>
     item_height: dp(42)
-    foreground_color: .843, .914, .972, 1
+    #foreground_color: .843, .914, .972, 1
+    foreground_color: .843, .972, .913, 1
     cols: 1
     padding: '12dp', 0
     canvas.before:
         Color:
-            rgba: 0.192, .498, 0.745, 1
+            #rgba: 0.192, .498, 0.745, 1
+            rgba: 0.192, 0.745, 0.470, 1
         BorderImage:
             source: 'atlas://electrum_trc/gui/kivy/theming/light/card_bottom'
             size: self.size
@@ -197,11 +199,13 @@
 <AddressFilter@GridLayout>
 	item_height: dp(42)
 	item_width: dp(60)
-	foreground_color: .843, .914, .972, 1
+	#foreground_color: .843, .914, .972, 1
+	foreground_color: .843, .972, .913, 1
 	cols: 1
 	canvas.before:
 		Color:
-			rgba: 0.192, .498, 0.745, 1
+			#rgba: 0.192, .498, 0.745, 1
+			rgba: 0.192, 0.745, 0.470, 1
 		BorderImage:
 			source: 'atlas://electrum_trc/gui/kivy/theming/light/card_bottom'
 			size: self.size
@@ -209,12 +213,14 @@
 
 <SearchBox@GridLayout>
 	item_height: dp(42)
-	foreground_color: .843, .914, .972, 1
+	#foreground_color: .843, .914, .972, 1
+	foreground_color: .843, .972, .913, 1
 	cols: 1
 	padding: '12dp', 0
 	canvas.before:
 		Color:
-			rgba: 0.192, .498, 0.745, 1
+			#rgba: 0.192, .498, 0.745, 1
+			rgba: 0.192, 0.745, 0.470, 1
         BorderImage:
             source: 'atlas://electrum_trc/gui/kivy/theming/light/card_bottom'
             size: self.size
@@ -242,7 +248,8 @@
         self.screen.show_menu(args[0]) if self.state == 'down' else self.screen.hide_menu()
     canvas.before:
         Color:
-            rgba: (0.192, .498, 0.745, 1) if self.state == 'down' else (0.15, 0.15, 0.17, 1)
+            #rgba: (0.192, .498, 0.745, 1) if self.state == 'down' else (0.15, 0.15, 0.17, 1)
+            rgba: (0.192, 0.745, 0.470, 1) if self.state == 'down' else (0.149, 0.168, 0.149, 1)
         Rectangle:
             size: self.size
             pos: self.pos
@@ -349,7 +356,8 @@
     spacing: '10dp'
     canvas.before:
         Color:
-            rgba: (0.192, .498, 0.745, 1) if self.state == 'down' else (0.3, 0.3, 0.3, 0)
+            #rgba: (0.192, .498, 0.745, 1) if self.state == 'down' else (0.3, 0.3, 0.3, 0)
+            rgba: (0.192, 0.745, 0.470, 1) if self.state == 'down' else (0.3, 0.3, 0.3, 1)
         Rectangle:
             size: self.size
             pos: self.pos
