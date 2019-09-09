@@ -23,7 +23,7 @@ echo osx build version is $TERRACOIN_ELECTRUM_VERSION
 git submodule init
 git submodule update
 
-info "Building CalinsQRReader..."
+echo "Building CalinsQRReader..."
 d=contrib/CalinsQRReader
 pushd $d
 rm -fr build
@@ -48,12 +48,6 @@ pyinstaller \
     -y \
     --name electrum-trc-$TERRACOIN_ELECTRUM_VERSION.bin \
     osx.spec
-
-info "Adding Terracoin URI types to Info.plist"
-plutil -insert 'CFBundleURLTypes' \
-   -xml '<array><dict> <key>CFBundleURLName</key> <string>terracoin</string> <key>CFBundleURLSchemes</key> <array><string>terracoin</string></array> </dict></array>' \
-   -- dist/Terracoin\ Electrum.app/Contents/Info.plist \
-   || fail "Could not add keys to Info.plist. Make sure the program 'plutil' exists and is installed."
 
 sudo hdiutil create -fs HFS+ -volname "Terracoin Electrum" \
     -srcfolder dist/Terracoin\ Electrum.app \

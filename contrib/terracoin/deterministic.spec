@@ -53,6 +53,7 @@ hiddenimports += [
 ]
 
 datas = [
+    ('electrum_trc/checkpoints*.*', 'electrum_trc'),
     ('electrum_trc/*.json', 'electrum_trc'),
     ('electrum_trc/locale', 'electrum_trc/locale'),
     ('electrum_trc/wordlist', 'electrum_trc/wordlist'),

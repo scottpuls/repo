@@ -9,4 +9,4 @@ aiohttp>=3.3.0
 aiohttp_socks
 certifi
 pycryptodomex
-python-bls>=0.1.5
+python-bls>=0.1.8

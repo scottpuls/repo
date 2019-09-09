@@ -58,6 +58,7 @@ hiddenimports += [
 ]
 
 datas = [
+    ('electrum_trc/checkpoints*.*', 'electrum_trc'),
     ('electrum_trc/*.json', 'electrum_trc'),
     ('electrum_trc/locale', 'electrum_trc/locale'),
     ('electrum_trc/wordlist', 'electrum_trc/wordlist'),
@@ -171,7 +172,14 @@ coll = COLLECT(exe, #tctl_exe,
                name=os.path.join('dist', 'electrum-trc'))
 
 app = BUNDLE(coll,
+             info_plist={
+                'NSHighResolutionCapable': True,
+                'NSSupportsAutomaticGraphicsSwitching': True,
+                'CFBundleURLTypes': [
+                    {'CFBundleURLName': 'terracoin', 'CFBundleURLSchemes': ['terracoin']}
+                ],
+             },
              name=os.path.join('dist', 'Terracoin Electrum.app'),
-             appname="Terracoin Electrum",
+             appname="Terracoin" Electrum",
 	         icon='electrum-trc.icns',
              version=TERRACOIN_ELECTRUM_VERSION)

@@ -35,13 +35,13 @@ from typing import Optional, Tuple
 
 from .bitcoin import public_key_to_p2pkh
 from .crypto import sha256d
-from .terracoin_msg import (SporkID, LLMQType, TerracoinType, TerracoinCmd, TerracoinVersionMsg,
-                       TerracoinPingMsg, TerracoinPongMsg, TerracoinGetDataMsg,
-                       TerracoinGetMNListDMsg)
+from .terracoin_msg import (SporkID, TerracoinType, TerracoinCmd, TerracoinVersionMsg,
+                            TerracoinPingMsg, TerracoinPongMsg, TerracoinGetDataMsg,
+                            TerracoinGetMNListDMsg)
 from .ecc import ECPubkey
 from .interface import GracefulDisconnect
 from .logging import Logger
-from .util import log_exceptions, ignore_exceptions, SilentTaskGroup, bh2u
+from .util import log_exceptions, ignore_exceptions, SilentTaskGroup
 from .version import ELECTRUM_VERSION
 
 
@@ -51,8 +51,9 @@ LOCAL_IP_ADDR = ipaddress.ip_address('127.0.0.1')
 PAYLOAD_LIMIT = 32*2**20  # 32MiB
 READ_LIMIT = 64*2**10     # 64KiB
 
-IS_LLMQ_TYPE = LLMQType.LLMQ_50_60
-CL_LLMQ_TYPE = LLMQType.LLMQ_400_60
+
+class PeerDisconnected(Exception):
+    pass
 
 
 def deserialize_peer(peer_str: str) -> Tuple[str, str]:
@@ -206,7 +207,7 @@ class TerracoinPeer(Logger):
                 await group.spawn(self.process_msgs)
                 await group.spawn(self.process_ping)
                 await group.spawn(self.monitor_connection)
-        except (asyncio.CancelledError, OSError) as e:
+        except (asyncio.CancelledError, OSError, PeerDisconnected) as e:
             raise GracefulDisconnect(e) from e
         except Exception as e:
             raise GracefulDisconnect(e, log_level=logging.ERROR) from e
@@ -269,26 +270,7 @@ class TerracoinPeer(Logger):
                     except asyncio.QueueFull:
                         self.logger.info('excess mnlistdiff msg')
                 elif res.cmd == 'islock':
-                    islock = res.payload
-                    request_id = islock.calc_request_id()
-                    mn_list = terracoin_net.network.mn_list
-                    quorum = mn_list.calc_responsible_quorum(IS_LLMQ_TYPE,
-                                                             request_id)
-                    if quorum is None:
-                        self.logger.info('no fourm found to verify islock')
-                        continue
-                    loop = terracoin_net.loop
-                    v_ok = await loop.run_in_executor(None,
-                                                      terracoin_net.verify_islock,
-                                                      islock, quorum,
-                                                      request_id)
-                    txid = bh2u(islock.txid[::-1])
-                    if v_ok:
-                        self.logger.info(f'verify islock ok: {txid}')
-                        terracoin_net.recent_islocks.append(txid)
-                        terracoin_net.trigger_callback('terracoin-islock', txid)
-                    else:
-                        self.logger.info(f'verify islock failed: {txid}')
+                    terracoin_net.append_to_recent_islocks(res.payload)
             await asyncio.sleep(0.1)
 
     async def monitor_connection(self):
@@ -404,8 +386,8 @@ class TerracoinPeer(Logger):
                     await self.ban(ban_msg)
                     raise GracefulDisconnect(ban_msg)
             except asyncio.IncompleteReadError:
-                raise GracefulDisconnect('start str not found '
-                                         'in buffer, EOF found')
+                raise PeerDisconnected('start str not found '
+                                       'in buffer, EOF found')
 
         try:
             res = None
@@ -439,7 +421,7 @@ class TerracoinPeer(Logger):
                 return res
             res = TerracoinCmd(cmd, payload)
         except asyncio.IncompleteReadError:
-            raise GracefulDisconnect('error reading msg, EOF reached')
+            raise PeerDisconnected('error reading msg, EOF reached')
         except Exception as e:
             raise GracefulDisconnect(e) from e
         return res

@@ -1,7 +1,10 @@
+import time
+from kivy.clock import Clock
 from kivy.factory import Factory
 from kivy.properties import (NumericProperty, StringProperty, BooleanProperty,
                              ObjectProperty, ListProperty)
 from kivy.lang import Builder
+from kivy.logger import Logger
 
 from electrum_trc.gui.kivy.i18n import _
 
@@ -235,6 +238,20 @@ Builder.load_string('''
             on_release: root.dismiss()
 
 
+<BlsSpeedPopup@Popup>
+    title: _('Show bls_py verify signature speed')
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: _('Min time') + ': %s' % root.min_t
+        Label:
+            text: _('Max time') + ': %s' % root.max_t
+        Button:
+            size_hint: 1, 0.1
+            text: _('Close')
+            on_release: root.dismiss()
+
+
 <TerracoinNetDialog@Popup>
     title: _('Terracoin Network')
     BoxLayout:
@@ -292,6 +309,12 @@ Builder.load_string('''
                     title: _('Banlist') + ': %s' % len(root.banlist)
                     description: _('Banned Terracoin Peers')
                     action: root.show_banlist
+                CardSeparator
+                SettingsItem:
+                    id: bls_speed_item
+                    title: _('BLS Speed')
+                    description: _('Show bls_py verify signature speed')
+                    action: root.show_bls_speed
 ''')
 
 
@@ -374,9 +397,9 @@ class StaticPeersPopup(Factory.Popup):
             self.err_label.text = f'Error: {res}'
         else:
             super(StaticPeersPopup, self).dismiss()
-            self.dn_dlg.config.set_key('terracoin_peers', res, True)
-            self.dn_dlg.static_peers = terracoin_net.terracoin_peers_as_str()
+            self.dn_dlg.config.set_key('terrcoin_peers', res, True)
             net.run_from_another_thread(terracoin_net.set_parameters())
+            self.dn_dlg.static_peers = terracoin_net.terracoin_peers_as_str()
 
 
 class SporkCard(Factory.BoxLayout):
@@ -470,6 +493,30 @@ class BanlistPopup(Factory.Popup):
         self.update()
 
 
+class BlsSpeedPopup(Factory.Popup):
+
+    min_t = NumericProperty(1000)
+    max_t = NumericProperty(0)
+
+    def __init__(self, dn_dlg):
+        Factory.Popup.__init__(self)
+        self.terracoin_net = dn_dlg.terracoin_net
+        self.clock_e = Clock.schedule_once(self.update, 0.5)
+
+    def update(self, *args, **kwargs):
+        start_t = time.time()
+        res = self.terracoin_net.test_bls_speed()
+        res_t = time.time() - start_t
+        Logger.info(f'Test BLS Speed: res={res}, time={res_t}')
+        self.min_t = min(self.min_t, res_t)
+        self.max_t = max(self.max_t, res_t)
+        self.clock_e = Clock.schedule_once(self.update, 0.5)
+
+    def dismiss(self, *args, **kwargs):
+        Clock.unschedule(self.clock_e)
+        super(BlsSpeedPopup, self).dismiss(*args, **kwargs)
+
+
 class TerracoinNetDialog(Factory.Popup):
 
     total = NumericProperty()
@@ -494,6 +541,8 @@ class TerracoinNetDialog(Factory.Popup):
         Factory.Popup.__init__(self)
         layout = self.ids.scrollviewlayout
         layout.bind(minimum_height=layout.setter('height'))
+        if not self.app.testnet:
+            layout.remove_widget(self.ids.bls_speed_item)
 
     def update(self):
         self.on_terracoin_net_activity()
@@ -504,7 +553,7 @@ class TerracoinNetDialog(Factory.Popup):
         self.on_network_updated()
         self.run_terracoin_net = self.config.get('run_terracoin_net', True)
         self.max_peers = self.terracoin_net.max_peers
-        self.use_static_peers = self.config.get('terracoin_use_static_peers', True)
+        self.use_static_peers = self.config.get('terracoin_use_static_peers', False)
         self.static_peers = self.terracoin_net.terracoin_peers_as_str()
 
     def open(self, *args, **kwargs):
@@ -581,7 +630,7 @@ class TerracoinNetDialog(Factory.Popup):
         MaxPeersPopup(self).open()
 
     def toggle_use_static_peers(self, *args):
-        use_static_peers = not self.config.get('terracoin_use_static_peers', True)
+        use_static_peers = not self.config.get('terracoin_use_static_peers', False)
         self.use_static_peers = use_static_peers
         self.config.set_key('terracoin_use_static_peers', use_static_peers, True)
         net = self.net
@@ -595,3 +644,6 @@ class TerracoinNetDialog(Factory.Popup):
 
     def show_banlist(self, *args):
         BanlistPopup(self).open()
+
+    def show_bls_speed(self, *args):
+        BlsSpeedPopup(self).open()
