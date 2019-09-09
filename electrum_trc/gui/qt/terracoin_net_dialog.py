@@ -255,7 +255,7 @@ class TerracoinNetDialogLayout(object):
             def update_bls_speed():
                 if self.parent.isVisible() and bls_speed_tab.isVisible():
                     start_t = time.time()
-                    res = self.network.dash_net.test_bls_speed()
+                    res = self.network.terracoin_net.test_bls_speed()
                     res_t = time.time() - start_t
                     _logger.info(f'Test BLS Speed: res={res}, time={res_t}')
                     self.min_t = min(self.min_t, res_t)
