@@ -180,6 +180,6 @@ app = BUNDLE(coll,
                 ],
              },
              name=os.path.join('dist', 'Terracoin Electrum.app'),
-             appname="Terracoin" Electrum",
+             appname="Terracoin Electrum",
 	         icon='electrum-trc.icns',
              version=TERRACOIN_ELECTRUM_VERSION)
