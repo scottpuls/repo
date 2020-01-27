@@ -39,7 +39,7 @@ _logger = get_logger(__name__)
 HEADER_SIZE = 80  # bytes
 MAX_TARGET = 0x00000000FFFFF000000000000000000000000000000000000000000000000000
 POW_TARGET_SPACING = int(2 * 60)  # Terracoin: 2 minutes
-POW_DGW3_HEIGHT = auxpow.MIN_AUXPOW_HEIGHT
+POW_DGW3_HEIGHT = constants.net.AUXPOW_START_HEIGHT
 DGW_PAST_BLOCKS = 24
 
 
@@ -58,36 +58,43 @@ def serialize_header(header_dict: dict) -> str:
         + int_to_hex(int(header_dict['nonce']), 4)
     return s
 
-# If expect_trailing_data, returns start position of trailing data
-def deserialize_header(s: bytes, height: int, expect_trailing_data=False, start_position=0):
+def deserialize_pure_header(s: bytes, height: int) -> dict:
     if not s:
         raise InvalidHeader('Invalid header: {}'.format(s))
-    if len(s) - start_position < HEADER_SIZE:
-        raise Exception('Invalid header length: {}'.format(len(s) - start_position))
+    if len(s) != HEADER_SIZE:
+        raise InvalidHeader('Invalid header length: {}'.format(len(s)))
     hex_to_int = lambda s: int.from_bytes(s, byteorder='little')
     h = {}
-    h['version'] = hex_to_int(s[start_position+0:start_position+4])
-    h['prev_block_hash'] = hash_encode(s[start_position+4:start_position+36])
-    h['merkle_root'] = hash_encode(s[start_position+36:start_position+68])
-    h['timestamp'] = hex_to_int(s[start_position+68:start_position+72])
-    h['bits'] = hex_to_int(s[start_position+72:start_position+76])
-    h['nonce'] = hex_to_int(s[start_position+76:start_position+80])
+    h['version'] = hex_to_int(s[0:4])
+    h['prev_block_hash'] = hash_encode(s[4:36])
+    h['merkle_root'] = hash_encode(s[36:68])
+    h['timestamp'] = hex_to_int(s[68:72])
+    h['bits'] = hex_to_int(s[72:76])
+    h['nonce'] = hex_to_int(s[76:80])
     h['block_height'] = height
+    return h
+
+def deserialize_full_header(s: bytes, height: int, expect_trailing_data=False, start_position=0):
+    """Deserialises a full block header which may include AuxPoW.
+    If expect_trailing_data is true, then we allow trailing data and return
+    the end position in the byte array alongside the header dict.  Otherwise
+    an error is raised if there is trailing, unconsumed data."""
+
+    original_start = start_position
+
+    pure_header_bytes = s[start_position : start_position + HEADER_SIZE]
+    h = deserialize_pure_header(pure_header_bytes, height)
+    start_position += HEADER_SIZE
 
     if auxpow.auxpow_active(h) and height > constants.net.max_checkpoint():
-        if expect_trailing_data:
-            h['auxpow'], start_position = auxpow.deserialize_auxpow_header(h, s, expect_trailing_data=True, start_position=start_position+HEADER_SIZE)
-        else:
-            h['auxpow'] = auxpow.deserialize_auxpow_header(h, s, start_position=start_position+HEADER_SIZE)
-    else:
-        if expect_trailing_data:
-            start_position = start_position+HEADER_SIZE
-        elif len(s) - start_position != HEADER_SIZE:
-            raise Exception('Invalid header length: {}'.format(len(s) - start_position))
+        _logger.info(f'Deserialize AuxPow {height}')
+        h['auxpow'], start_position = auxpow.deserialize_auxpow_header(h, s, start_position=start_position)
 
     if expect_trailing_data:
         return h, start_position
 
+    if start_position != len(s):
+        raise Exception('Invalid header length: {}'.format(len(s) - original_start))
     return h
 
 def hash_header(header: dict) -> str:
@@ -302,12 +309,7 @@ class Blockchain(Logger):
 
     @classmethod
     def verify_header(cls, header: dict, prev_hash: str, target: int, expected_header_hash: str=None, skip_auxpow: bool=False) -> None:
-        # Don't verify AuxPoW when covered by a checkpoint
-        if header.get('block_height') <= constants.net.max_checkpoint():
-            skip_auxpow = True
         _hash = hash_header(header)
-        if not skip_auxpow:
-            _pow_hash = auxpow.hash_parent_header(header)
         if expected_header_hash and expected_header_hash != _hash:
             raise Exception("hash mismatches with expected: {} vs {}".format(expected_header_hash, _hash))
         if prev_hash != header.get('prev_block_hash'):
@@ -318,19 +320,22 @@ class Blockchain(Logger):
         if bits != header.get('bits'):
             raise Exception("bits mismatch: %s vs %s" % (bits, header.get('bits')))
         # Don't verify AuxPoW when covered by a checkpoint
+        if header.get('block_height') <= constants.net.max_checkpoint():
+            skip_auxpow = True
         if not skip_auxpow:
+            _pow_hash = auxpow.hash_parent_header(header)
             block_hash_as_num = int.from_bytes(bfh(_pow_hash), byteorder='big')
             if block_hash_as_num > target:
                 raise Exception(f"insufficient proof of work: {block_hash_as_num} vs target {target}")
 
     def verify_chunk(self, index: int, data: bytes) -> bytes:
         stripped = bytearray()
+        start_position = 0
         start_height = index * 2016
         prev_hash = self.get_hash(start_height - 1)
-        target = self.get_target((index-1) * 2016)
-        chunk_headers = {'empty': True}
-        start_position = 0
+        target = self.get_target((index - 1) * 2016)
         i = 0
+        chunk_headers = {'empty': True}
         while start_position < len(data):
             height = start_height + i
             try:
@@ -339,14 +344,13 @@ class Blockchain(Logger):
                 expected_header_hash = None
 
             # Strip auxpow header for disk
-            raw_header = data[start_position:start_position+HEADER_SIZE]
-            stripped.extend(raw_header)
+            stripped.extend(data[start_position : start_position + HEADER_SIZE])
 
-            height = index * 2016 + i
-            header, start_position = deserialize_header(data, height, expect_trailing_data=True, start_position=start_position)
+            header, start_position = deserialize_full_header(data, height, expect_trailing_data=True, start_position=start_position)
             if height > POW_DGW3_HEIGHT:
                 target = self.get_target(height, chunk_headers)
             self.verify_header(header, prev_hash, target, expected_header_hash)
+
             chunk_headers[height] = header
             if i == 0:
                 chunk_headers['min_height'] = height
@@ -355,6 +359,7 @@ class Blockchain(Logger):
             prev_hash = hash_header(header)
 
             i = i + 1
+
         return bytes(stripped)
 
     @with_lock
@@ -507,7 +512,7 @@ class Blockchain(Logger):
                 raise Exception('Expected to read a full header. This was only {} bytes'.format(len(h)))
         if h == bytes([0])*HEADER_SIZE:
             return None
-        return deserialize_header(h, height)
+        return deserialize_pure_header(h, height)
 
     def header_at_tip(self) -> Optional[dict]:
         """Return latest header."""
@@ -541,16 +546,21 @@ class Blockchain(Logger):
         index = height // 2016
 
         # compute target from chunk x, used in chunk x+1
+        if height >= POW_DGW3_HEIGHT:
+            return self.get_target_dgw_v3(height, chunk_headers)
+
         if constants.net.TESTNET:
             return 0
         if index == -1:
             return MAX_TARGET
-        if height > POW_DGW3_HEIGHT:
-            return self.get_target_dgw_v3(height, chunk_headers)
         if index < len(self.checkpoints):
             h, t = self.checkpoints[index]
             return t
-        first = self.read_header(index * 2016)
+        if (height + 2016 - 1 > constants.net.AUXPOW_START_HEIGHT) and (height + 2016 > 2016):
+            # Terracoin: Apply retargeting hardfork after AuxPoW start
+            first = self.read_header(index * 2016 - 1)
+        else:
+            first = self.read_header(index * 2016)
         last = self.read_header(index * 2016 + 2015)
         if not first or not last:
             raise MissingHeader()
@@ -699,9 +709,9 @@ class Blockchain(Logger):
     def connect_chunk(self, idx: int, hexdata: str) -> bool:
         assert idx >= 0, idx
         try:
-            data = bfh(hexdata)
+            #data = bfh(hexdata)
             # verify_chunk also strips the AuxPoW headers
-            data = self.verify_chunk(idx, data)
+            data = self.verify_chunk(idx, bfh(hexdata))
             self.save_chunk(idx, data)
             return True
         except BaseException as e:
@@ -724,7 +734,6 @@ class Blockchain(Logger):
                     with open(self.path(), 'rb') as f:
                         lower_header = height - DGW_PAST_BLOCKS
                         for height in range(height, lower_header-1, -1):
-                            # FIXME auxpow, HEADER_SIZE isn't enough
                             f.seek(height * HEADER_SIZE)
                             hd = f.read(HEADER_SIZE)
                             if len(hd) < HEADER_SIZE:

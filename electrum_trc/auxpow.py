@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Electrum-TRC - lightweight Terracoin client
+# Electrum-NMC - lightweight Namecoin client
 # Copyright (C) 2018 The Namecoin developers
 #
 # License for all components not part of Electrum-DOGE:
@@ -47,6 +47,7 @@ import binascii
 
 from . import blockchain
 from .bitcoin import hash_encode, hash_decode
+from . import constants
 from .crypto import sha256d
 from . import transaction
 from .transaction import BCDataStream, Transaction, TYPE_SCRIPT
@@ -60,10 +61,6 @@ MAX_INDEX_PC_BACKWARDS_COMPATIBILITY = 20
 COINBASE_MERGED_MINING_HEADER = bfh('fabe') + b'mm'
 
 BLOCK_VERSION_AUXPOW_BIT = 0x100
-MIN_AUXPOW_HEIGHT = 833000
-
-# TODO: move this to network constants
-CHAIN_ID = 50
 
 class AuxPowVerifyError(Exception):
     pass
@@ -86,8 +83,11 @@ class AuxPoWCoinbaseNoInputsError(AuxPowVerifyError):
 class AuxPoWCoinbaseRootTooLate(AuxPowVerifyError):
     pass
 
+class AuxPoWCoinbaseRootMissingError(AuxPowVerifyError):
+    pass
+
 def auxpow_active(base_header):
-    height_allows_auxpow = base_header['block_height'] >= MIN_AUXPOW_HEIGHT
+    height_allows_auxpow = base_header['block_height'] >= constants.net.AUXPOW_START_HEIGHT
     version_allows_auxpow = base_header['version'] & BLOCK_VERSION_AUXPOW_BIT
 
     return height_allows_auxpow and version_allows_auxpow
@@ -95,10 +95,11 @@ def auxpow_active(base_header):
 def get_chain_id(base_header):
     return base_header['version'] >> 16
 
-# If expect_trailing_data, returns start position of trailing data
-def deserialize_auxpow_header(base_header, s, expect_trailing_data=False, start_position=0):
-    if len(s) - start_position == 0 and not expect_trailing_data:
-        return None
+def deserialize_auxpow_header(base_header, s, start_position=0) -> (dict, int):
+    """Deserialises an AuxPoW instance.
+
+    Returns the deserialised AuxPoW dict and the end position in the byte
+    array as a pair."""
 
     auxpow_header = {}
 
@@ -120,20 +121,15 @@ def deserialize_auxpow_header(base_header, s, expect_trailing_data=False, start_
     auxpow_header['coinbase_merkle_branch'], auxpow_header['coinbase_merkle_index'], start_position = deserialize_merkle_branch(s, start_position=start_position)
     auxpow_header['chain_merkle_branch'], auxpow_header['chain_merkle_index'], start_position = deserialize_merkle_branch(s, start_position=start_position)
     
-    # Finally there's the parent header.  Deserialize it, along with any
-    # trailing data if requested.
-    if expect_trailing_data:
-        auxpow_header['parent_header'], start_position = blockchain.deserialize_header(s, 1, expect_trailing_data=expect_trailing_data, start_position=start_position)
-    else:
-        auxpow_header['parent_header'] = blockchain.deserialize_header(s, 1, expect_trailing_data=expect_trailing_data, start_position=start_position)
+    # Finally there's the parent header.  Deserialize it.
+    parent_header_bytes = s[start_position : start_position + blockchain.HEADER_SIZE]
+    auxpow_header['parent_header'] = blockchain.deserialize_pure_header(parent_header_bytes, None)
+    start_position += blockchain.HEADER_SIZE
     # The parent block header doesn't have any block height,
-    # so delete that field.  (We used 1 as a dummy value above.)
+    # so delete that field.  (We used None as a dummy value above.)
     del auxpow_header['parent_header']['block_height']
 
-    if expect_trailing_data:
-        return auxpow_header, start_position
-
-    return auxpow_header
+    return auxpow_header, start_position
 
 # Copied from merkle_branch_from_string in https://github.com/electrumalt/electrum-doge/blob/f74312822a14f59aa8d50186baff74cade449ccd/lib/blockchain.py#L622
 # Returns list of hashes, merkle index, and position of trailing data in s
@@ -149,19 +145,6 @@ def deserialize_merkle_branch(s, start_position=0):
         hashes.append(hash_encode(_hash))
     index = vds.read_int32()
     return hashes, index, vds.read_cursor
-
-# TODO: This is dead code that will probably be removed.
-def strip_auxpow_headers(index, chunk):
-    result = bytearray()
-    trailing_data = chunk
-
-    i = 0
-    while len(trailing_data) > 0:
-        header, trailing_data = blockchain.deserialize_header(trailing_data, index*2016 + i, expect_trailing_data=True)
-        result.extend(bfh(blockchain.serialize_header(header)))
-        i = i + 1
-
-    return bytes(result)
 
 def hash_parent_header(header):
     if not auxpow_active(header):
@@ -224,7 +207,7 @@ def verify_auxpow(header):
     #if (get_chain_id(parent_block) == chain_id)
     #  return error("Aux POW parent has our chain ID");
 
-    if (get_chain_id(parent_block) == CHAIN_ID):
+    if (get_chain_id(parent_block) == constants.net.AUXPOW_CHAIN_ID):
         raise AuxPoWOwnChainIDError()
 
     #if (vChainMerkleBranch.size() > 30)
@@ -281,7 +264,7 @@ def verify_auxpow(header):
 
         #return error("Aux POW missing chain merkle root in parent coinbase");
 
-        raise Exception('Aux POW missing chain merkle root in parent coinbase')
+        raise AuxPoWCoinbaseRootMissingError('Aux POW missing chain merkle root in parent coinbase')
 
     #if (pcHead != script.end())
     #{
@@ -365,7 +348,7 @@ def verify_auxpow(header):
     #if (nChainIndex != (rand % nSize))
         #return error("Aux POW wrong index");
 
-    index = calc_merkle_index(CHAIN_ID, nonce, size)
+    index = calc_merkle_index(constants.net.AUXPOW_CHAIN_ID, nonce, size)
     #print 'index', index
 
     if (chain_index != index):

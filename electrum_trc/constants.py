@@ -91,6 +91,9 @@ class BitcoinMainnet(AbstractNet):
     BIP44_COIN_TYPE = 83
     DIP3_ACTIVATION_HEIGHT = None
 
+    AUXPOW_CHAIN_ID = 0x0032
+    AUXPOW_START_HEIGHT = 833000
+
 
 class BitcoinTestnet(AbstractNet):
 
@@ -113,6 +116,9 @@ class BitcoinTestnet(AbstractNet):
     XPUB_HEADERS_INV = inv_dict(XPUB_HEADERS)
     BIP44_COIN_TYPE = 1
     DIP3_ACTIVATION_HEIGHT = None
+
+    AUXPOW_CHAIN_ID = 0x0001
+    AUXPOW_START_HEIGHT = 0
 
 
 class BitcoinRegtest(BitcoinTestnet):
