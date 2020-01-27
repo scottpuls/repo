@@ -199,7 +199,7 @@ class Test_auxpow(SequentialTestCase):
 #        padded_script = bfh('00') * (auxpow.MAX_INDEX_PC_BACKWARDS_COMPATIBILITY + 4)
 #        padded_script += input_script[8:]
 #
-3        header['auxpow']['parent_coinbase_tx']._inputs[0]['scriptSig'] = bh2u(padded_script)
+#        header['auxpow']['parent_coinbase_tx']._inputs[0]['scriptSig'] = bh2u(padded_script)
 #
 #        self.clear_coinbase_outputs(header['auxpow'])
 #
