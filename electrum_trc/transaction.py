@@ -494,22 +494,36 @@ def deserialize(raw: str, force_full_parse=False, expect_trailing_data=False, ra
 def read_vds(vds, d, full_parse, alone_data=False, expect_trailing_data=False, expect_trailing_bytes=False):
     # support DIP2 deserialization
     header = vds.read_uint32()
-    tx_type = header >> 16  # DIP2 tx type
-    if tx_type:
-        version = header & 0x0000ffff
-    else:
-        version = header
+    # not on DIP2 yet, and not compat with AuxPow currently
+    #tx_type = header >> 16  # DIP2 tx type
+    #if tx_type:
+    #    version = header & 0x0000ffff
+    #else:
+    #    version = header
 
-    if tx_type and version < 3:
-        version = header
-        tx_type = 0
+    #if tx_type and version < 3:
+    #    version = header
+    #    tx_type = 0
+    version = header
+    tx_type = 0
 
     d['version'] = version
     d['tx_type'] = tx_type
     n_vin = vds.read_compact_size()
+    #is_segwit = (n_vin == 0)
+    #if is_segwit:
+    #    marker = vds.read_bytes(1)
+    #    if marker != b'\x01':
+    #        raise ValueError('invalid txn marker byte: {}'.format(marker))
+    #    n_vin = vds.read_compact_size()
+    #d['segwit_ser'] = is_segwit
     d['inputs'] = [parse_input(vds, full_parse=full_parse) for i in range(n_vin)]
     n_vout = vds.read_compact_size()
     d['outputs'] = [parse_output(vds, i) for i in range(n_vout)]
+    #if is_segwit:
+    #    for i in range(n_vin):
+    #        txin = d['inputs'][i]
+    #        parse_witness(vds, txin, full_parse=full_parse)
     d['lockTime'] = vds.read_uint32()
     if tx_type:
         d['extra_payload'] = read_extra_payload(vds, tx_type)
@@ -701,12 +715,9 @@ class Transaction:
         self.tx_type = d['tx_type']
         self.extra_payload = d['extra_payload']
         self.is_partial_originally = d['partial']
+        #self._segwit_ser = d['segwit_ser']
         # Auxpow
         #return d
-        if self.expect_trailing_data is None:
-            self.expect_trailing_data = False
-        if self.expect_trailing_bytes is None:
-            self.expect_trailing_bytes = False
         if self.expect_trailing_data:
             if self.expect_trailing_bytes:
                 if self.raw is not None:
