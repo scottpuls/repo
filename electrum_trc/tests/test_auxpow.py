@@ -17,18 +17,50 @@ target_850964 = blockchain.Blockchain.bits_to_target(436333414)
 
 class Test_auxpow(SequentialTestCase):
 
-    # Deserialize the AuxPoW header from Terracoin block #37,174.
+    @staticmethod
+    def deserialize_with_auxpow(data_hex: str, **kwargs):
+        """Deserializes a block header given as hex string
+        This makes sure that the data is always deserialised as full
+        block header with AuxPoW.
+        The keyword-arguments expect_trailing_data and start_position can be
+        set and will be passed on to deserialize_full_header."""
+
+        # We pass a height beyond the last checkpoint, because
+        # deserialize_full_header expects checkpointed headers to be truncated
+        # by ElectrumX (i.e. not contain an AuxPoW).
+        return blockchain.deserialize_full_header(bfh(data_hex), constants.net.max_checkpoint() + 1, **kwargs)
+
+    @staticmethod
+    def clear_coinbase_outputs(auxpow_header: dict, fix_merkle_root=True) -> None:
+        """Clears the auxpow coinbase outputs
+        Set the outputs of the auxpow coinbase to an empty list.  This is
+        necessary when the coinbase has been modified and needs to be
+        re-serialised, since present outputs are invalid due to the
+        fast_tx_deserialize optimisation."""
+
+        auxpow_header['parent_coinbase_tx']._outputs = []
+
+        # Clear the cached raw serialization
+        auxpow_header['parent_coinbase_tx'].raw = None
+        auxpow_header['parent_coinbase_tx'].raw_bytes = None
+
+        # Re-serialize.  Note that our AuxPoW library won't do this for us,
+        # because it optimizes via fast_txid.
+        auxpow_header['parent_coinbase_tx'].raw_bytes = bfh(auxpow_header['parent_coinbase_tx'].serialize_to_network(witness=False))
+
+        # Correct the coinbase Merkle root.
+        if fix_merkle_root:
+            update_merkle_root_to_match_coinbase(auxpow_header)
+
+    # Deserialize the AuxPoW header from Terracoin block #850,964.
     # This height was chosen because it has large, non-equal lengths of the
     # coinbase and chain Merkle branches.  It has an explicit coinbase MM
     # header.
     def test_deserialize_auxpow_header_explicit_coinbase(self):
-        header_bytes = bfh(header_850964)
-        # We can't pass the real height because it's below a checkpoint, and
-        # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
+        header = self.deserialize_with_auxpow(header_850964)
         header_auxpow = header['auxpow']
 
-        self.assertEqual(auxpow.CHAIN_ID, header_auxpow['chain_id'])
+        self.assertEqual(constants.net.AUXPOW_CHAIN_ID, header_auxpow['chain_id'])
 
         coinbase_tx = header_auxpow['parent_coinbase_tx']
         expected_coinbase_txid = '0d1a8b9f539f19058b85dd209b1c210ec3811275aff414ce318efd5a05f23215'
@@ -66,36 +98,38 @@ class Test_auxpow(SequentialTestCase):
         observed_parent_hash = blockchain.hash_header(header_auxpow['parent_header'])
         self.assertEqual(expected_parent_hash, observed_parent_hash)
 
-        expected_parent_header = blockchain.deserialize_header(bfh('00000020d4b83d5e8e6aa350094371d005275044c7789c4830b7f90200000000000000005bf56206df79280717d5d01a8f996708e55661cd960bf21875f5069a3b53ecf71fc20758c440041846f4511a'), 1)
+        expected_parent_header = blockchain.deserialize_pure_header(bfh('00000020d4b83d5e8e6aa350094371d005275044c7789c4830b7f90200000000000000005bf56206df79280717d5d01a8f996708e55661cd960bf21875f5069a3b53ecf71fc20758c440041846f4511a'), None)
         expected_parent_merkle_root = expected_parent_header['merkle_root']
         observed_parent_merkle_root = header_auxpow['parent_header']['merkle_root']
         self.assertEqual(expected_parent_merkle_root, observed_parent_merkle_root)
 
-    # Verify the AuxPoW header from Terracoin block #37,174.
+    def test_deserialize_should_reject_trailing_junk(self):
+        with self.assertRaises(Exception):
+            self.deserialize_with_auxpow(header_850964 + "00")
+
+    def test_deserialize_with_expected_trailing_data(self):
+        data = "00" + header_850964 + "00"
+        _, start_position = self.deserialize_with_auxpow(data, expect_trailing_data=True, start_position=1)
+        self.assertEqual(start_position, len(header_850964)//2 + 1)
+
+    # Verify the AuxPoW header from Terracoin block #850,964.
     def test_verify_auxpow_header_explicit_coinbase(self):
         header_bytes = bfh(header_850964)
         # We can't pass the real height because it's below a checkpoint, and
         # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
-
+        header = self.deserialize_with_auxpow(header_850964)
         blockchain.Blockchain.verify_header(header, prev_hash_850964, target_850964)
 
     # Verify the AuxPoW header from Terracoin block #833,204.  This header
     # doesn't have an explicit MM coinbase header.
     def test_verify_auxpow_header_implicit_coinbase(self):
-        header_bytes = bfh(header_833204)
-        # We can't pass the real height because it's below a checkpoint, and
-        # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
+        header = self.deserialize_with_auxpow(header_833204)
 
         blockchain.Blockchain.verify_header(header, prev_hash_833204, target_833204)
 
     # Check that a non-generate AuxPoW transaction is rejected.
     def test_should_reject_non_generate_auxpow(self):
-        header_bytes = bfh(header_850964)
-        # We can't pass the real height because it's below a checkpoint, and
-        # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
+        header = self.deserialize_with_auxpow(header_850964)
 
         header['auxpow']['coinbase_merkle_index'] = 0x01
 
@@ -105,18 +139,10 @@ class Test_auxpow(SequentialTestCase):
     # Check that block headers from the sidechain are rejected as parent chain
     # for AuxPoW, via checking of the chain ID's.
     def test_should_reject_own_chain_id(self):
-        parent_header_bytes = bfh(header_833004)
-        # We can't pass the real height because it's below a checkpoint, and
-        # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        parent_header = blockchain.deserialize_header(parent_header_bytes, constants.net.max_checkpoint() + 1)
+        parent_header = self.deserialize_with_auxpow(header_833004)
+        self.assertEqual(1, auxpow.get_chain_id(parent_header))
 
-        self.assertEqual(auxpow.CHAIN_ID, auxpow.get_chain_id(parent_header))
-
-        header_bytes = bfh(header_850964)
-        # We can't pass the real height because it's below a checkpoint, and
-        # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
-
+        header = self.deserialize_with_auxpow(header_850964)
         header['auxpow']['parent_header'] = parent_header
 
         with self.assertRaises(auxpow.AuxPoWOwnChainIDError):
@@ -125,10 +151,7 @@ class Test_auxpow(SequentialTestCase):
     # Check that where the chain merkle branch is far too long to use, it's
     # rejected.
     def test_should_reject_very_long_merkle_branch(self):
-        header_bytes = bfh(header_850964)
-        # We can't pass the real height because it's below a checkpoint, and
-        # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
+        header = self.deserialize_with_auxpow(header_850964)
 
         header['auxpow']['chain_merkle_branch'] = list([32 * '00' for i in range(32)])
 
@@ -141,19 +164,11 @@ class Test_auxpow(SequentialTestCase):
     # that the transaction hash is part of the merkle tree. This test modifies
     # the transaction, invalidating the hash, to confirm that it's rejected.
     def test_should_reject_bad_coinbase_merkle_branch(self):
-        header_bytes = bfh(header_850964)
-        # We can't pass the real height because it's below a checkpoint, and
-        # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
+        header = self.deserialize_with_auxpow(header_850964)
 
-        # Set outputs to an empty list
-        header['auxpow']['parent_coinbase_tx']._outputs = []
-        # Clear the cached raw serialization
-        header['auxpow']['parent_coinbase_tx'].raw = None
-        header['auxpow']['parent_coinbase_tx'].raw_bytes = None
-        # Re-serialize.  Note that our AuxPoW library won't do this for us,
-        # because it optimizes via fast_txid.
-        header['auxpow']['parent_coinbase_tx'].raw_bytes = bfh(header['auxpow']['parent_coinbase_tx'].serialize_to_network())
+        # Clearing the outputs modifies the coinbase transaction so that its
+        # hash no longer matches the parent block merkle root.
+        self.clear_coinbase_outputs(header['auxpow'], fix_merkle_root=False)
 
         with self.assertRaises(auxpow.AuxPoWBadCoinbaseMerkleBranchError):
             blockchain.Blockchain.verify_header(header, prev_hash_850964, target_850964)
@@ -161,28 +176,12 @@ class Test_auxpow(SequentialTestCase):
     # Ensure that in case of a malformed coinbase transaction (no inputs) it's
     # caught and processed neatly.
     def test_should_reject_coinbase_no_inputs(self):
-        header_bytes = bfh(header_850964)
-        # We can't pass the real height because it's below a checkpoint, and
-        # the deserializer expects ElectrumX to strip checkpointed AuxPoW.
-        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
+        header = self.deserialize_with_auxpow(header_850964)
 
         # Set inputs to an empty list
         header['auxpow']['parent_coinbase_tx']._inputs = []
-        # Set outputs to an empty list; this is necessary to re-serialize
-        # because any outputs present are invalid due to fast_tx_deserialize
-        # optimization.
-        header['auxpow']['parent_coinbase_tx']._outputs = []
-        # Clear the cached raw serialization
-        header['auxpow']['parent_coinbase_tx'].raw = None
-        header['auxpow']['parent_coinbase_tx'].raw_bytes = None
-        # Re-serialize.  Note that our AuxPoW library won't do this for us,
-        # because it optimizes via fast_txid.
-        header['auxpow']['parent_coinbase_tx'].raw_bytes = bfh(header['auxpow']['parent_coinbase_tx'].serialize_to_network())
 
-        # Correct the coinbase Merkle root.  This will also break the
-        # difficulty check, but as that doesn't occur until the end, we can get
-        # away with it.
-        update_merkle_root_to_match_coinbase(header['auxpow'])
+        self.clear_coinbase_outputs(header['auxpow'])
 
         with self.assertRaises(auxpow.AuxPoWCoinbaseNoInputsError):
             blockchain.Blockchain.verify_header(header, prev_hash_850964, target_850964)
@@ -192,8 +191,7 @@ class Test_auxpow(SequentialTestCase):
     # for it to do so.  This test is for the code path with an implicit MM
     # coinbase header.
     def test_should_reject_coinbase_root_too_late(self):
-        header_bytes = bfh(header_833204)
-        header = blockchain.deserialize_header(header_bytes, constants.net.max_checkpoint() + 1)
+        header = self.deserialize_with_auxpow(header_833204)
 
         input_script = bfh(header['auxpow']['parent_coinbase_tx'].inputs()[0]['scriptSig'])
 
@@ -202,37 +200,34 @@ class Test_auxpow(SequentialTestCase):
 
         header['auxpow']['parent_coinbase_tx']._inputs[0]['scriptSig'] = bh2u(padded_script)
 
-        # Set outputs to an empty list; this is necessary to re-serialize
-        # because any outputs present are invalid due to fast_tx_deserialize
-        # optimization.
-        header['auxpow']['parent_coinbase_tx']._outputs = []
-        # Clear the cached raw serialization
-        header['auxpow']['parent_coinbase_tx'].raw = None
-        header['auxpow']['parent_coinbase_tx'].raw_bytes = None
-        # Re-serialize.  Note that our AuxPoW library won't do this for us,
-        # because it optimizes via fast_txid.
-        header['auxpow']['parent_coinbase_tx'].raw_bytes = bfh(header['auxpow']['parent_coinbase_tx'].serialize_to_network())
+        self.clear_coinbase_outputs(header['auxpow'])
 
-        # Correct the coinbase Merkle root.  This will also break the
-        # difficulty check, but as that doesn't occur until the end, we can get
-        # away with it.
-        update_merkle_root_to_match_coinbase(header['auxpow'])
+        with self.assertRaises(auxpow.AuxPoWCoinbaseRootTooLate):
+            blockchain.Blockchain.verify_header(header, prev_hash_833204, target_833204)
 
-       # Skip test current auxpow.py makes it impossible to get to this
-       # with self.assertRaises(auxpow.AuxPoWCoinbaseRootTooLate):
-            #blockchain.Blockchain.verify_header(header, prev_hash_833204, target_833204)
-       #     auxpow.verify_auxpow(header)
+    # Verifies that the commitment of the auxpow to the block header it is
+    # proving for is actually checked.
+    def test_should_reject_coinbase_root_missing(self):
+        header = self.deserialize_with_auxpow(header_833204)
+        # Modify the header so that its hash no longer matches the
+        # chain Merkle root in the AuxPoW.
+        header["timestamp"] = 42
+        with self.assertRaises(auxpow.AuxPoWCoinbaseRootMissingError):
+            blockchain.Blockchain.verify_header(header, prev_hash_833204, target_833204)
 
 
-# Fix up the merkle root of the parent block header to match the coinbase
-# transaction.
 def update_merkle_root_to_match_coinbase(auxpow_header):
+    """Updates the parent block merkle root
+    This modifies the merkle root in the auxpow's parent block header to
+    match the auxpow coinbase transaction.  We need this after modifying
+    the coinbase for tests.
+    Note that this also breaks the PoW.  This is fine for tests that
+    fail due to an earlier check already."""
+
     coinbase = auxpow_header['parent_coinbase_tx']
 
     revised_coinbase_txid = auxpow.fast_txid(coinbase)
-
     revised_merkle_branch = [revised_coinbase_txid]
-
     revised_merkle_root = auxpow.calculate_merkle_root(revised_coinbase_txid, revised_merkle_branch, auxpow_header['coinbase_merkle_index'])
 
     auxpow_header['parent_header']['merkle_root'] = revised_merkle_root
