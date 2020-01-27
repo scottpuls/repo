@@ -691,7 +691,7 @@ class Transaction:
     # Auxpow
     # If expect_trailing_data == True, also returns start position of trailing
     # data.
-    def deserialize(self, force_full_parse=False
+    def deserialize(self, force_full_parse=False,
                     extra_payload_for_json=False):
         # Auxpow
         #if self.raw is None:
