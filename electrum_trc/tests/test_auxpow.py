@@ -46,7 +46,7 @@ class Test_auxpow(SequentialTestCase):
 
         # Re-serialize.  Note that our AuxPoW library won't do this for us,
         # because it optimizes via fast_txid.
-        auxpow_header['parent_coinbase_tx'].raw_bytes = bfh(auxpow_header['parent_coinbase_tx'].serialize_to_network(witness=False))
+        auxpow_header['parent_coinbase_tx'].raw_bytes = bfh(auxpow_header['parent_coinbase_tx'].serialize_to_network())
 
         # Correct the coinbase Merkle root.
         if fix_merkle_root:
