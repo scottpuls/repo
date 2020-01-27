@@ -12,8 +12,9 @@ for i, x in enumerate(sys.argv):
 else:
     raise Exception('no name')
 
-PY36BINDIR =  os.environ.get('PY36BINDIR')
-TERRACOIN_ELECTRUM_VERSION =  os.environ.get('TERRACOIN_ELECTRUM_VERSION')
+PY36BINDIR = os.environ.get('PY36BINDIR')
+TERRACOIN_ELECTRUM_VERSION = os.environ.get('TERRACOIN_ELECTRUM_VERSION')
+ICONS_FILE = 'electrum_trc/gui/icons/electrum-trc.icns'
 
 hiddenimports = collect_submodules('trezorlib')
 hiddenimports += collect_submodules('hideezlib')
@@ -181,5 +182,5 @@ app = BUNDLE(coll,
              },
              name=os.path.join('dist', 'Terracoin Electrum.app'),
              appname="Terracoin Electrum",
-	         icon='electrum-trc.icns',
+	         icon=ICONS_FILE,
              version=TERRACOIN_ELECTRUM_VERSION)

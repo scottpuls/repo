@@ -42,7 +42,8 @@ from .bitcoin import (TYPE_ADDRESS, TYPE_PUBKEY, TYPE_SCRIPT, hash_160,
                       opcodes, add_number_to_script, base_decode)
 from .crypto import sha256d
 from .keystore import xpubkey_to_address, xpubkey_to_pubkey
-from .terracoin_tx import read_extra_payload, serialize_extra_payload, to_varbytes
+from .terracoin_tx import (ProTxBase, read_extra_payload, serialize_extra_payload,
+                      to_varbytes)
 from .logging import get_logger
 
 
@@ -690,7 +691,8 @@ class Transaction:
     # Auxpow
     # If expect_trailing_data == True, also returns start position of trailing
     # data.
-    def deserialize(self, force_full_parse=False):
+    def deserialize(self, force_full_parse=False
+                    extra_payload_for_json=False):
         # Auxpow
         #if self.raw is None:
         if self.raw is None and self.raw_bytes is None:
@@ -700,6 +702,15 @@ class Transaction:
             return
         # Auxpow
         #d = deserialize(self.raw, force_full_parse)
+        #res = self.set_data_from_dict(d)
+        #if extra_payload_for_json:
+        #    extra_payload = self.extra_payload
+        #    if isinstance(extra_payload, ProTxBase):
+        #        extra_payload_json = extra_payload._asdict()
+        #else:
+        #    extra_payload_json = bh2u(extra_payload)
+        #    res.update({'extra_payload': extra_payload_json})
+        #return res
         if self.expect_trailing_data:
             d, start_position = deserialize(self.raw, force_full_parse, expect_trailing_data=self.expect_trailing_data, raw_bytes=self.raw_bytes, expect_trailing_bytes=self.expect_trailing_bytes, copy_input=self.copy_input, start_position=self.start_position)
             return self.set_data_from_dict(d, start_position)

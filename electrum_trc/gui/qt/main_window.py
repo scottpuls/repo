@@ -183,7 +183,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         self.console_tab = self.create_console_tab()
         self.contacts_tab = self.create_contacts_tab()
         # Disabled until API is stable.
-        #tabs.addTab(self.create_proposals_tab(), _('Budget Proposals'))
+#        tabs.addTab(self.create_proposals_tab(), _('Budget Proposals'))
         tabs.setMinimumSize(1020, 500)
         tabs.setObjectName("main_window_nav_bar")
         tabs.addTab(self.create_history_tab(), read_QIcon("tab_history.png"), _('History'))
@@ -234,9 +234,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         if self.network:
             self.network_signal.connect(self.on_network_qt)
             self.gui_object.terracoin_net_sobj.main.connect(self.on_terracoin_net_qt)
-            interests = ['wallet_updated', 'network_updated', 'blockchain_updated',
-                         'new_transaction', 'status',
-                         'banner', 'verified', 'fee', 'fee_histogram']
+            interests = ['wallet_updated', 'network_updated',
+                         'blockchain_updated', 'new_transaction', 'status',
+                         'banner', 'verified', 'verified-islock',
+                         'fee', 'fee_histogram']
 #                         'proposals']
             # To avoid leaking references to "self" that prevent the
             # window from being GC-ed when closed, callbacks should be
@@ -398,7 +399,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             wallet, tx = args
             if wallet == self.wallet:
                 self.tx_notification_queue.put(tx)
-        elif event in ['status', 'banner', 'verified', 'fee', 'proposals', 'fee_histogram']:
+        elif event in ['status', 'banner', 'verified', 'verified-islock',
+                       'fee', 'proposals', 'fee_histogram']:
             # Handle in GUI thread
             self.network_signal.emit(event, args)
         else:
@@ -425,6 +427,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
             wallet, tx_hash, tx_mined_status = args
             if wallet == self.wallet:
                 self.history_model.update_tx_mined_status(tx_hash, tx_mined_status)
+        elif event == 'verified-islock':
+            wallet, tx_hash = args
+            if wallet == self.wallet:
+                self.need_update.set()
         elif event == 'fee':
             if self.config.is_dynfee():
                 self.fee_slider.update()
@@ -796,6 +802,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
 
     def timer_actions(self):
         # Note this runs in the GUI thread
+        self.console_tab.lock_if_need()
         if self.need_update.is_set():
             self.need_update.clear()
             self.update_wallet()
@@ -909,10 +916,11 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
                 else:
                     icon = read_QIcon("status_connected_proxy%s.png"%fork_str)
         else:
+            not_connected_msg = _('Electrum network not connected')
             if self.network.proxy:
-                text = "{} ({})".format(_("Not connected"), _("proxy enabled"))
+                text = "{} ({})".format(not_connected_msg, _("proxy enabled"))
             else:
-                text = _("Not connected")
+                text = not_connected_msg
             icon = read_QIcon("status_disconnected.png")
 
         self.tray.setToolTip("%s (%s)" % (text, self.wallet.basename()))
@@ -2172,7 +2180,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
 
     def create_console_tab(self):
         from .console import Console
-        self.console = console = Console()
+        self.console = console = Console(parent=self)
         console.setObjectName("console_container")
         return console
 
@@ -2232,7 +2240,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         sb.addPermanentWidget(StatusBarButton(read_QIcon("preferences.png"), _("Preferences"), self.settings_dialog ) )
         self.seed_button = StatusBarButton(read_QIcon("seed.png"), _("Seed"), self.show_seed_dialog )
         sb.addPermanentWidget(self.seed_button)
-        self.status_button = StatusBarButton(read_QIcon("status_disconnected.png"), _("Network"), lambda: self.gui_object.show_network_dialog(self))
+        self.status_button = StatusBarButton(
+            read_QIcon("status_disconnected.png"), _("Electrum Network"),
+            lambda: self.gui_object.show_network_dialog(self))
         sb.addPermanentWidget(self.status_button)
         self.terracoin_net_button = StatusBarButton(read_QIcon('terracoin_net_0.png'), _("Terracoin Network"), lambda: self.gui_object.show_terracoin_net_dialog(self))
         self.update_terracoin_net_status_btn()
@@ -2287,6 +2297,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger):
         msg = _('Password was updated successfully') if self.wallet.has_password() else _('Password is disabled, this wallet is not protected')
         self.show_message(msg, title=_("Success"))
         self.update_lock_icon()
+        self.console_tab.update_lock_state()
 
     def toggle_search(self):
         tab = self.tabs.currentWidget()

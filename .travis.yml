@@ -60,6 +60,7 @@ script:
   fi
 deploy:
 - provider: releases
+  edge: true
   api_key:
     secure: Ai8/85+KOOyuciaR4Z0zfczjy4GzcWNCus/qWmG1ix9nLbe4yt95anmGvhNrmJpNbBnKmYxiPtJuHAdIknRvDKDFAlSi1RPaAmkqSPMbLMq2MkyvOQne75yhkffFTtIONj9NUafqDIeWKJbD75o3ucLwMzwM8acbAkwrX3D15RRoJsoghU7acQXhqjzCNlLg+oI/nAw/SkXpBfDOTwVuT1PAJ+4jjF9WWKTrkvrcR7A5+kmCmi0RjEj7Ov9DfZVAt8IvZNiTM5sJeGv9h88N5oHAYhXa/66bpyq7vtqEcd548hR3fXXgtgTpToMrmzLqHjM6QHJF5VQQiVlFhvQCHuW/Vl+Mt9+YxUIzctvi1rUS3bsmXZwAcHEmH9+3oVcSR4/hxNYkMDAettw2AfcmQEwj4zrdtE28xOtkeRsE/od2erMBbxIzpTAyupo4N7D7a097q5NvR2kWa7r9F+8A9Fq8iPb7fLBekU6ny2Qq6s4FR/+7dV8vd15rLh2OyMUOU+Vyp9S/Lfzl++Q2q4pDHfITvCHLPf9HE7Cf4ZzSbxyeDvzX3hbKr0QGzqyrMfffKs41ACJSHJKd6Q0DtPofObEOYBJnEYeLhU/24d7sZNyORAdwE4RYkviBC2tbokJKF5TLuKxTTzH1POt8eWmy+z7GOEiP1CCi1/dAsWoFtns=
   file:
@@ -69,6 +70,7 @@ deploy:
     tags: true
     condition: "$TRAVIS_OS_NAME = osx"
 - provider: releases
+  edge: true
   api_key:
     secure: Ai8/85+KOOyuciaR4Z0zfczjy4GzcWNCus/qWmG1ix9nLbe4yt95anmGvhNrmJpNbBnKmYxiPtJuHAdIknRvDKDFAlSi1RPaAmkqSPMbLMq2MkyvOQne75yhkffFTtIONj9NUafqDIeWKJbD75o3ucLwMzwM8acbAkwrX3D15RRoJsoghU7acQXhqjzCNlLg+oI/nAw/SkXpBfDOTwVuT1PAJ+4jjF9WWKTrkvrcR7A5+kmCmi0RjEj7Ov9DfZVAt8IvZNiTM5sJeGv9h88N5oHAYhXa/66bpyq7vtqEcd548hR3fXXgtgTpToMrmzLqHjM6QHJF5VQQiVlFhvQCHuW/Vl+Mt9+YxUIzctvi1rUS3bsmXZwAcHEmH9+3oVcSR4/hxNYkMDAettw2AfcmQEwj4zrdtE28xOtkeRsE/od2erMBbxIzpTAyupo4N7D7a097q5NvR2kWa7r9F+8A9Fq8iPb7fLBekU6ny2Qq6s4FR/+7dV8vd15rLh2OyMUOU+Vyp9S/Lfzl++Q2q4pDHfITvCHLPf9HE7Cf4ZzSbxyeDvzX3hbKr0QGzqyrMfffKs41ACJSHJKd6Q0DtPofObEOYBJnEYeLhU/24d7sZNyORAdwE4RYkviBC2tbokJKF5TLuKxTTzH1POt8eWmy+z7GOEiP1CCi1/dAsWoFtns=
   file:
