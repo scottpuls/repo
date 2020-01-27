@@ -140,7 +140,7 @@ class Test_auxpow(SequentialTestCase):
     # for AuxPoW, via checking of the chain ID's.
     def test_should_reject_own_chain_id(self):
         parent_header = self.deserialize_with_auxpow(header_833004)
-        self.assertEqual(1, auxpow.get_chain_id(parent_header))
+        self.assertEqual(50, auxpow.get_chain_id(parent_header))
 
         header = self.deserialize_with_auxpow(header_850964)
         header['auxpow']['parent_header'] = parent_header
