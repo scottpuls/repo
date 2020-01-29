@@ -2,6 +2,8 @@
 
  * fix wallet locking during verification of DIP3 transactions
  * add qt console password locking for SW wallets
+ * fix transaction conflict with DIP2 and AuxPow
+ * New Icons
 
 
 # Release 3.3.8.1
